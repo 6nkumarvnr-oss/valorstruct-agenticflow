@@ -20,7 +20,7 @@ class DeploymentHardeningTest(unittest.TestCase):
         self.assertTrue(backend_env.exists())
         self.assertTrue(frontend_env.exists())
 
-        backend_text = backend_env.read_text()
+        backend_text = backend_env.read_text(encoding="utf-8")
         for key in [
             "AGENTICFLOW_ENV=development",
             "AGENTICFLOW_DB_ENGINE=sqlite",
@@ -30,7 +30,7 @@ class DeploymentHardeningTest(unittest.TestCase):
             "AGENTICFLOW_DEMO_MODE=true",
         ]:
             self.assertIn(key, backend_text)
-        self.assertIn("VITE_AGENTICFLOW_API_BASE_URL=http://localhost:8000", frontend_env.read_text())
+        self.assertIn("VITE_AGENTICFLOW_API_BASE_URL=http://localhost:8000", frontend_env.read_text(encoding="utf-8"))
 
     def test_settings_defaults_and_cors_parsing(self):
         with patch.dict(os.environ, {}, clear=True):
@@ -84,7 +84,7 @@ class DeploymentHardeningTest(unittest.TestCase):
     def test_deployment_docs_and_readme_references_exist(self):
         deployment_doc = ROOT / "agenticflow/docs/deployment-hardening.md"
         self.assertTrue(deployment_doc.exists())
-        doc_text = deployment_doc.read_text()
+        doc_text = deployment_doc.read_text(encoding="utf-8")
         for required in [
             "local backend startup",
             "health/readiness checks",
@@ -93,12 +93,12 @@ class DeploymentHardeningTest(unittest.TestCase):
             "backup / snapshot instruction",
         ]:
             self.assertIn(required.lower(), doc_text.lower())
-        self.assertIn("Phase 6.3 — Deployment Hardening MVP", (ROOT / "README.md").read_text())
+        self.assertIn("Phase 6.3 — Deployment Hardening MVP", (ROOT / "README.md").read_text(encoding="utf-8"))
 
     def test_frontend_config_helper_exists(self):
         config = ROOT / "agenticflow/frontend/src/config.ts"
         self.assertTrue(config.exists())
-        text = config.read_text()
+        text = config.read_text(encoding="utf-8")
         self.assertIn("AGENTICFLOW_API_BASE_URL", text)
         self.assertIn("AGENTICFLOW_DEMO_MODE", text)
 

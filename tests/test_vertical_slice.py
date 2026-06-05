@@ -2,33 +2,36 @@ from pathlib import Path
 import json
 import subprocess
 import unittest
+from command_utils import resolve_node_command
 
 ROOT = Path(__file__).resolve().parents[1]
 
 
 class VerticalSliceTest(unittest.TestCase):
     def compile_typescript(self):
-        subprocess.run(["npm", "run", "test:ts"], cwd=ROOT, check=True, capture_output=True, text=True)
+        subprocess.run([*resolve_node_command("npm"), "run", "test:ts"], cwd=ROOT, check=True, capture_output=True, text=True, encoding="utf-8")
 
     def run_vertical_slice(self):
-        subprocess.run(["npm", "run", "vertical-slice"], cwd=ROOT, check=True, capture_output=True, text=True)
+        subprocess.run([*resolve_node_command("npm"), "run", "vertical-slice"], cwd=ROOT, check=True, capture_output=True, text=True, encoding="utf-8")
         output = subprocess.run(
             ["node", ".tmp/agenticflow/patchd-core/vertical-slice/runVerticalSlice.js"],
             cwd=ROOT,
             check=True,
             capture_output=True,
             text=True,
+            encoding="utf-8",
         ).stdout
         return json.loads(output)
 
     def run_custom_signal(self, signal):
         self.compile_typescript()
         subprocess.run(
-            ["npx", "tsc", "-p", "agenticflow/tsconfig.json"],
+            [*resolve_node_command("npx"), "tsc", "-p", "agenticflow/tsconfig.json"],
             cwd=ROOT,
             check=True,
             capture_output=True,
             text=True,
+            encoding="utf-8",
         )
         script = """
 import { runVerticalSlice, createVerticalSliceReportJson } from './.tmp/agenticflow/patchd-core/vertical-slice/runVerticalSlice.js';
@@ -42,6 +45,7 @@ console.log(JSON.stringify({ result, report: JSON.parse(createVerticalSliceRepor
             check=True,
             capture_output=True,
             text=True,
+            encoding="utf-8",
         ).stdout
         return json.loads(output)
 
@@ -121,7 +125,7 @@ console.log(JSON.stringify({ result, report: JSON.parse(createVerticalSliceRepor
         self.assertEqual(report["feedback"]["newWeight"], 1.05)
 
     def test_frontend_demo_contains_required_viewers_and_export_button(self):
-        page = (ROOT / "agenticflow/frontend/src/pages/VerticalSliceDemo.tsx").read_text()
+        page = (ROOT / "agenticflow/frontend/src/pages/VerticalSliceDemo.tsx").read_text(encoding="utf-8")
 
         for label in [
             "Custom Signal Input Panel",

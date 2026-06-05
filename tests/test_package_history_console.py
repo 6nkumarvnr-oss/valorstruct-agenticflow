@@ -8,7 +8,7 @@ class PackageHistoryConsoleTest(unittest.TestCase):
     def test_package_history_console_contains_required_panels_and_actions(self):
         page_path = ROOT / "agenticflow/frontend/src/pages/PackageHistoryConsole.tsx"
         self.assertTrue(page_path.exists())
-        page = page_path.read_text()
+        page = page_path.read_text(encoding="utf-8")
 
         for required in [
             "Package History & Approval Console",
@@ -57,7 +57,7 @@ class PackageHistoryConsoleTest(unittest.TestCase):
     def test_project_dashboard_contains_required_cards_panels_and_quick_links(self):
         page_path = ROOT / "agenticflow/frontend/src/pages/ProjectDashboard.tsx"
         self.assertTrue(page_path.exists())
-        page = page_path.read_text()
+        page = page_path.read_text(encoding="utf-8")
 
         for required in [
             "Valor Struct / AgenticFlow Project Dashboard",
@@ -85,7 +85,7 @@ class PackageHistoryConsoleTest(unittest.TestCase):
     def test_multi_part_package_console_contains_required_project_package_surface(self):
         page_path = ROOT / "agenticflow/frontend/src/pages/MultiPartPackageConsole.tsx"
         self.assertTrue(page_path.exists())
-        page = page_path.read_text()
+        page = page_path.read_text(encoding="utf-8")
 
         for required in [
             "Valor Struct / AgenticFlow",
@@ -115,8 +115,8 @@ class PackageHistoryConsoleTest(unittest.TestCase):
         auth_path = ROOT / "agenticflow/frontend/src/state/AuthContext.tsx"
         self.assertTrue(login_path.exists())
         self.assertTrue(auth_path.exists())
-        login_page = login_path.read_text()
-        auth_context = auth_path.read_text()
+        login_page = login_path.read_text(encoding="utf-8")
+        auth_context = auth_path.read_text(encoding="utf-8")
 
         for required in [
             "Email input",
@@ -142,7 +142,7 @@ class PackageHistoryConsoleTest(unittest.TestCase):
     def test_engineering_console_contains_current_user_workspace_panel(self):
         page_path = ROOT / "agenticflow/frontend/src/pages/EngineeringPackageConsole.tsx"
         self.assertTrue(page_path.exists())
-        page = page_path.read_text()
+        page = page_path.read_text(encoding="utf-8")
 
         for required in [
             "current user panel",

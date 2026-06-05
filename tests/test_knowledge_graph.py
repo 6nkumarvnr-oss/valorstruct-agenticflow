@@ -2,17 +2,19 @@ from pathlib import Path
 import json
 import subprocess
 import unittest
+from command_utils import resolve_node_command
 
 ROOT = Path(__file__).resolve().parents[1]
 
 
 def run_knowledge_script(script: str):
     subprocess.run(
-        ["npx", "tsc", "-p", "knowledge-graph/tsconfig.json", "--outDir", ".tmp/knowledge-graph"],
+        [*resolve_node_command("npx"), "tsc", "-p", "knowledge-graph/tsconfig.json", "--outDir", ".tmp/knowledge-graph"],
         cwd=ROOT,
         check=True,
         capture_output=True,
         text=True,
+        encoding="utf-8",
     )
     output = subprocess.run(
         ["node", "--input-type=module", "-e", script],
@@ -20,6 +22,7 @@ def run_knowledge_script(script: str):
         check=True,
         capture_output=True,
         text=True,
+        encoding="utf-8",
     ).stdout
     return json.loads(output)
 
@@ -82,7 +85,7 @@ console.log(JSON.stringify(reasonAboutBasePlateGraph('BP-01')));
         self.assertEqual(result["recommendedCapabilities"], ["Drawing Intelligence Core", "Manufacturing Core", "Steel Design Pack", "Valor Quotation Pack"])
 
     def test_p_agent_routes_graph_reasoning_goal(self):
-        subprocess.run(["npx", "tsc", "-p", "agenticflow/tsconfig.json"], cwd=ROOT, check=True, capture_output=True, text=True)
+        subprocess.run([*resolve_node_command("npx"), "tsc", "-p", "agenticflow/tsconfig.json"], cwd=ROOT, check=True, capture_output=True, text=True, encoding="utf-8")
         output = subprocess.run(
             [
                 "node",
@@ -102,6 +105,7 @@ console.log(JSON.stringify({ plan: planner.createPlan(goal), result, memory: run
             check=True,
             capture_output=True,
             text=True,
+            encoding="utf-8",
         ).stdout
         payload = json.loads(output)
 

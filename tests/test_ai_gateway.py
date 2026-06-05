@@ -2,13 +2,14 @@ import json
 import subprocess
 from pathlib import Path
 import unittest
+from command_utils import resolve_node_command
 
 ROOT = Path(__file__).resolve().parents[1]
 
 
 class AIGatewayTest(unittest.TestCase):
     def test_patchd_uses_provider_agnostic_model_roles(self):
-        subprocess.run(["npx", "tsc", "-p", "agenticflow/tsconfig.json"], cwd=ROOT, check=True, capture_output=True, text=True)
+        subprocess.run([*resolve_node_command("npx"), "tsc", "-p", "agenticflow/tsconfig.json"], cwd=ROOT, check=True, capture_output=True, text=True, encoding="utf-8")
         output = subprocess.run(
             [
                 "node",
@@ -25,6 +26,7 @@ console.log(JSON.stringify({ request, route, patchDGatewayRoleMap }));
             check=True,
             capture_output=True,
             text=True,
+            encoding="utf-8",
         ).stdout
         result = json.loads(output)
 
@@ -38,8 +40,8 @@ console.log(JSON.stringify({ request, route, patchDGatewayRoleMap }));
         self.assertEqual(result["patchDGatewayRoleMap"]["metaGovernance"], "orchestration_model")
 
     def test_ai_gateway_docs_use_roles_not_provider_routing(self):
-        gateway = (ROOT / "agenticflow/ai-gateway/README.md").read_text()
-        architecture = (ROOT / "agenticflow/docs/valor-struct-ecosystem-architecture.md").read_text()
+        gateway = (ROOT / "agenticflow/ai-gateway/README.md").read_text(encoding="utf-8")
+        architecture = (ROOT / "agenticflow/docs/valor-struct-ecosystem-architecture.md").read_text(encoding="utf-8")
         gateway_section = architecture.split("## AI Gateway Strategy", 1)[1].split("## Engineering Knowledge Base", 1)[0]
 
         for role in [

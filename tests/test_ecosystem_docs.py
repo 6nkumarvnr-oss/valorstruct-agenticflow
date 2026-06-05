@@ -6,7 +6,7 @@ ROOT = Path(__file__).resolve().parents[1]
 
 class EcosystemDocsTest(unittest.TestCase):
     def test_end_state_architecture_documents_novelty_and_gateway(self):
-        doc = (ROOT / "agenticflow/docs/valor-struct-ecosystem-architecture.md").read_text()
+        doc = (ROOT / "agenticflow/docs/valor-struct-ecosystem-architecture.md").read_text(encoding="utf-8")
 
         self.assertIn("governance-driven agentic operating system", doc.lower())
         self.assertIn("AI Gateway", doc)
@@ -15,8 +15,8 @@ class EcosystemDocsTest(unittest.TestCase):
         self.assertIn("Business Consultant AI", doc)
 
     def test_commercial_roadmap_defers_business_and_marketing_modules(self):
-        roadmap = (ROOT / "agenticflow/docs/commercial-roadmap.md").read_text()
-        next_stage = (ROOT / "agenticflow/docs/next-stage-plan.md").read_text()
+        roadmap = (ROOT / "agenticflow/docs/commercial-roadmap.md").read_text(encoding="utf-8")
+        next_stage = (ROOT / "agenticflow/docs/next-stage-plan.md").read_text(encoding="utf-8")
 
         self.assertIn("Valor Struct Business Growth AI for Engineering Companies", roadmap)
         self.assertIn("Business Consultant AI and Digital Marketing AI should be Phase 2 commercial modules", roadmap)
@@ -25,7 +25,7 @@ class EcosystemDocsTest(unittest.TestCase):
     def test_five_layer_ai_organism_architecture_note(self):
         doc_path = ROOT / "agenticflow/docs/five-layer-ai-organism.md"
         self.assertTrue(doc_path.exists())
-        doc = doc_path.read_text()
+        doc = doc_path.read_text(encoding="utf-8")
 
         for required in [
             "Valor Struct Five-Layer AI Organism Architecture",
@@ -77,11 +77,11 @@ class EcosystemDocsTest(unittest.TestCase):
             ROOT / "workflow-orchestration-core/README.md",
             ROOT / "knowledge-graph/README.md",
         ]
-        combined = "\n".join(path.read_text() for path in docs)
+        combined = "\n".join(path.read_text(encoding="utf-8") for path in docs)
 
-        root_readme = (ROOT / "README.md").read_text()
-        architecture = (ROOT / "agenticflow/docs/valor-struct-ecosystem-architecture.md").read_text()
-        gateway = (ROOT / "agenticflow/ai-gateway/README.md").read_text()
+        root_readme = (ROOT / "README.md").read_text(encoding="utf-8")
+        architecture = (ROOT / "agenticflow/docs/valor-struct-ecosystem-architecture.md").read_text(encoding="utf-8")
+        gateway = (ROOT / "agenticflow/ai-gateway/README.md").read_text(encoding="utf-8")
 
         self.assertIn("five-layer", root_readme.lower())
         self.assertIn("provider-agnostic AI Gateway", root_readme)

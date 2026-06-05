@@ -2,6 +2,7 @@ from pathlib import Path
 import json
 import subprocess
 import unittest
+from command_utils import resolve_node_command
 
 from agenticflow.backend.main import SteelDesignRunRequest, run_steel_design
 
@@ -10,11 +11,12 @@ ROOT = Path(__file__).resolve().parents[1]
 
 def run_steel_script(script: str):
     subprocess.run(
-        ["npx", "tsc", "-p", "engineering-capability-pack/tsconfig.json", "--outDir", ".tmp/steel-design-pack"],
+        [*resolve_node_command("npx"), "tsc", "-p", "engineering-capability-pack/tsconfig.json", "--outDir", ".tmp/steel-design-pack"],
         cwd=ROOT,
         check=True,
         capture_output=True,
         text=True,
+        encoding="utf-8",
     )
     output = subprocess.run(
         ["node", "--input-type=module", "-e", script],
@@ -22,6 +24,7 @@ def run_steel_script(script: str):
         check=True,
         capture_output=True,
         text=True,
+        encoding="utf-8",
     ).stdout
     return json.loads(output)
 
@@ -64,11 +67,12 @@ console.log(JSON.stringify(result.context.warnings));
 
     def test_p_agent_routes_steel_design_goal(self):
         subprocess.run(
-            ["npx", "tsc", "-p", "agenticflow/tsconfig.json"],
+            [*resolve_node_command("npx"), "tsc", "-p", "agenticflow/tsconfig.json"],
             cwd=ROOT,
             check=True,
             capture_output=True,
             text=True,
+            encoding="utf-8",
         )
         output = subprocess.run(
             [
@@ -85,6 +89,7 @@ console.log(JSON.stringify(result));
             check=True,
             capture_output=True,
             text=True,
+            encoding="utf-8",
         ).stdout
         result = json.loads(output)
 
@@ -116,7 +121,7 @@ console.log(JSON.stringify(result));
         self.assertIn("reportMarkdown", response)
 
     def test_frontend_page_contains_required_panels(self):
-        page = (ROOT / "agenticflow/frontend/src/pages/SteelDesignDemo.tsx").read_text()
+        page = (ROOT / "agenticflow/frontend/src/pages/SteelDesignDemo.tsx").read_text(encoding="utf-8")
 
         for label in [
             "project/member input",

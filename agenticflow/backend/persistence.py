@@ -70,6 +70,15 @@ class GovernancePersistenceStore:
         self.connection.row_factory = sqlite3.Row
         self.initialize_schema()
 
+    def close(self) -> None:
+        self.connection.close()
+
+    def __enter__(self) -> "GovernancePersistenceStore":
+        return self
+
+    def __exit__(self, exc_type: object, exc: object, traceback: object) -> None:
+        self.close()
+
     def initialize_schema(self) -> None:
         self.connection.executescript(
             """
