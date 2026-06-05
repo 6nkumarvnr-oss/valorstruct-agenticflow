@@ -23,7 +23,7 @@ class PilotReleaseCandidateTest(unittest.TestCase):
     def test_version_json_and_endpoint_report_pilot_rc(self):
         version_json = ROOT / "agenticflow/version.json"
         self.assertTrue(version_json.exists())
-        metadata = json.loads(version_json.read_text())
+        metadata = json.loads(version_json.read_text(encoding="utf-8"))
         self.assertEqual(metadata["version"], "0.1.0-pilot-rc")
         self.assertEqual(metadata["status"], "pilot-release-candidate")
         self.assertEqual(metadata["architecture"], "five-layer governed AI organism")
@@ -35,7 +35,7 @@ class PilotReleaseCandidateTest(unittest.TestCase):
 
     def test_readmes_reference_pilot_rc_docs_sequence_and_totals(self):
         for path in [ROOT / "README.md", ROOT / "agenticflow/README.md"]:
-            text = path.read_text()
+            text = path.read_text(encoding="utf-8")
             self.assertIn("v0.1.0 Pilot RC", text)
             self.assertIn("release-notes-v0.1.0-pilot-rc.md", text)
             self.assertIn("pilot-demo-qa-checklist.md", text)
@@ -46,7 +46,7 @@ class PilotReleaseCandidateTest(unittest.TestCase):
             self.assertIn("837.94 SAR", text)
 
     def test_qa_checklist_includes_expected_totals_and_release_flow(self):
-        text = (ROOT / "agenticflow/docs/pilot-demo-qa-checklist.md").read_text()
+        text = (ROOT / "agenticflow/docs/pilot-demo-qa-checklist.md").read_text(encoding="utf-8")
         lower_text = text.lower()
         for required in [
             "install dependencies",
@@ -76,7 +76,7 @@ class PilotReleaseCandidateTest(unittest.TestCase):
             self.assertIn(required.lower(), lower_text)
 
     def test_known_limitations_include_required_warnings(self):
-        text = (ROOT / "agenticflow/docs/known-limitations-v0.1.0.md").read_text()
+        text = (ROOT / "agenticflow/docs/known-limitations-v0.1.0.md").read_text(encoding="utf-8")
         lower_text = text.lower()
         for required in [
             "Deterministic demo data only",
@@ -92,7 +92,7 @@ class PilotReleaseCandidateTest(unittest.TestCase):
             self.assertIn(required.lower(), lower_text)
 
     def test_release_gate_checklist_includes_required_gates(self):
-        text = (ROOT / "agenticflow/docs/pilot-release-gate-checklist.md").read_text()
+        text = (ROOT / "agenticflow/docs/pilot-release-gate-checklist.md").read_text(encoding="utf-8")
         lower_text = text.lower()
         for required in [
             "all tests pass",

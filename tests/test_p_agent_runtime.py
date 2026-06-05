@@ -2,6 +2,7 @@ from pathlib import Path
 import json
 import subprocess
 import unittest
+from command_utils import resolve_node_command
 
 from agenticflow.backend.main import RunAgentRequest, run_agent
 
@@ -9,13 +10,14 @@ ROOT = Path(__file__).resolve().parents[1]
 
 
 def compile_typescript() -> None:
-    subprocess.run(["npm", "run", "test:ts"], cwd=ROOT, check=True, capture_output=True, text=True)
+    subprocess.run([*resolve_node_command("npm"), "run", "test:ts"], cwd=ROOT, check=True, capture_output=True, text=True, encoding="utf-8")
     subprocess.run(
-        ["npx", "tsc", "-p", "agenticflow/tsconfig.json"],
+        [*resolve_node_command("npx"), "tsc", "-p", "agenticflow/tsconfig.json"],
         cwd=ROOT,
         check=True,
         capture_output=True,
         text=True,
+        encoding="utf-8",
     )
 
 
@@ -37,6 +39,7 @@ console.log(JSON.stringify({ planned: planner.createPlan(goal), result, memory: 
             check=True,
             capture_output=True,
             text=True,
+            encoding="utf-8",
         ).stdout
         return json.loads(output)
 
@@ -88,7 +91,7 @@ console.log(JSON.stringify({ planned: planner.createPlan(goal), result, memory: 
         self.assertIn("ENGINEERING_PACK_SELECTED", result["auditSummary"]["eventTypes"])
 
     def test_frontend_page_includes_goal_input_and_execution_panels(self):
-        page = (ROOT / "agenticflow/frontend/src/pages/PAgentRuntimeDemo.tsx").read_text()
+        page = (ROOT / "agenticflow/frontend/src/pages/PAgentRuntimeDemo.tsx").read_text(encoding="utf-8")
 
         for label in [
             "Goal input",

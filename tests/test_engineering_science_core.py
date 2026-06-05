@@ -2,17 +2,19 @@ from pathlib import Path
 import json
 import subprocess
 import unittest
+from command_utils import resolve_node_command
 
 ROOT = Path(__file__).resolve().parents[1]
 
 
 def run_science_script(script: str):
     subprocess.run(
-        ["npx", "tsc", "-p", "engineering-science-core/tsconfig.json", "--outDir", ".tmp/engineering-science-core"],
+        [*resolve_node_command("npx"), "tsc", "-p", "engineering-science-core/tsconfig.json", "--outDir", ".tmp/engineering-science-core"],
         cwd=ROOT,
         check=True,
         capture_output=True,
         text=True,
+        encoding="utf-8",
     )
     output = subprocess.run(
         ["node", "--input-type=module", "-e", script],
@@ -20,6 +22,7 @@ def run_science_script(script: str):
         check=True,
         capture_output=True,
         text=True,
+        encoding="utf-8",
     ).stdout
     return json.loads(output)
 

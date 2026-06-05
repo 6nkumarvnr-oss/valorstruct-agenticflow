@@ -68,47 +68,47 @@ class StorageMigrationTest(unittest.TestCase):
             "exports",
         ]:
             self.assertIn(f"CREATE TABLE IF NOT EXISTS {table}", schema)
-            self.assertIn(f"CREATE TABLE IF NOT EXISTS {table}", migration_path.read_text())
+            self.assertIn(f"CREATE TABLE IF NOT EXISTS {table}", migration_path.read_text(encoding="utf-8"))
         for index_hint in ["workspace_id", "project_id", "package_run_id", "approval_status", "level"]:
             self.assertIn(index_hint, schema)
 
     def test_store_abstraction_and_sqlite_store_wrapper_exist(self):
         self.assertTrue(hasattr(GovernanceStore, "create_project"))
         with tempfile.TemporaryDirectory() as directory:
-            store = create_sqlite_store(Path(directory) / "agenticflow.db")
-            self.assertIsInstance(store, SQLiteGovernanceStore)
-            self.assertIn("users", store.table_names())
-            project = store.create_project({"id": "project-storage-test", "name": "Storage Test", "clientName": "Valor Struct"})
-            self.assertEqual(project["id"], "project-storage-test")
-            self.assertGreaterEqual(len(store.list_projects()), 1)
+            with create_sqlite_store(Path(directory) / "agenticflow.db") as store:
+                self.assertIsInstance(store, SQLiteGovernanceStore)
+                self.assertIn("users", store.table_names())
+                project = store.create_project({"id": "project-storage-test", "name": "Storage Test", "clientName": "Valor Struct"})
+                self.assertEqual(project["id"], "project-storage-test")
+                self.assertGreaterEqual(len(store.list_projects()), 1)
 
     def test_seed_demo_data_adds_workspace_users_and_demo_packages(self):
         with tempfile.TemporaryDirectory() as directory:
-            store = GovernancePersistenceStore(Path(directory) / "agenticflow.db")
-            seeded = seed_demo_data(store)
-            emails = {user["email"] for user in seeded["users"]}
-            self.assertIn("owner@valorstruct.local", emails)
-            self.assertIn("admin@valorstruct.local", emails)
-            self.assertIn("senior.engineer@valorstruct.local", emails)
-            self.assertEqual(seeded["workspaces"][0]["workspaceId"], "valor-demo-workspace")
-            self.assertEqual(seeded["packageRun"]["packageRun"]["id"], "package-run-bp-01-001")
-            self.assertEqual([part["partId"] for part in seeded["projectLevelPackageRun"]["parts"]], ["BP-01", "BP-02", "BR-01"])
+            with GovernancePersistenceStore(Path(directory) / "agenticflow.db") as store:
+                seeded = seed_demo_data(store)
+                emails = {user["email"] for user in seeded["users"]}
+                self.assertIn("owner@valorstruct.local", emails)
+                self.assertIn("admin@valorstruct.local", emails)
+                self.assertIn("senior.engineer@valorstruct.local", emails)
+                self.assertEqual(seeded["workspaces"][0]["workspaceId"], "valor-demo-workspace")
+                self.assertEqual(seeded["packageRun"]["packageRun"]["id"], "package-run-bp-01-001")
+                self.assertEqual([part["partId"] for part in seeded["projectLevelPackageRun"]["parts"]], ["BP-01", "BP-02", "BR-01"])
 
     def test_export_store_snapshot_and_json_include_governance_tables(self):
         with tempfile.TemporaryDirectory() as directory:
-            store = GovernancePersistenceStore(Path(directory) / "agenticflow.db")
-            seed_demo_data(store)
-            snapshot = export_store_snapshot(store)
-            snapshot_json = export_store_snapshot_json(store)
-            parsed = json.loads(snapshot_json)
+            with GovernancePersistenceStore(Path(directory) / "agenticflow.db") as store:
+                seed_demo_data(store)
+                snapshot = export_store_snapshot(store)
+                snapshot_json = export_store_snapshot_json(store)
+                parsed = json.loads(snapshot_json)
 
-            for key in ["users", "workspaces", "package_runs", "audit_events", "exports"]:
-                self.assertIn(key, snapshot)
-                self.assertIn(key, parsed)
-                self.assertGreaterEqual(len(snapshot[key]), 1)
-            self.assertIn("project_parts", snapshot)
-            self.assertIn("project_level_package_runs", snapshot)
-            self.assertIsInstance(snapshot_json, str)
+                for key in ["users", "workspaces", "package_runs", "audit_events", "exports"]:
+                    self.assertIn(key, snapshot)
+                    self.assertIn(key, parsed)
+                    self.assertGreaterEqual(len(snapshot[key]), 1)
+                self.assertIn("project_parts", snapshot)
+                self.assertIn("project_level_package_runs", snapshot)
+                self.assertIsInstance(snapshot_json, str)
 
     def test_admin_storage_helpers_require_owner_or_admin(self):
         owner_session = login(LoginRequest(email="owner@valorstruct.local", password="ValorDemo123!"))

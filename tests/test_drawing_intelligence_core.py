@@ -2,17 +2,19 @@ from pathlib import Path
 import json
 import subprocess
 import unittest
+from command_utils import resolve_node_command
 
 ROOT = Path(__file__).resolve().parents[1]
 
 
 def run_drawing_script(script: str):
     subprocess.run(
-        ["npx", "tsc", "-p", "drawing-intelligence-core/tsconfig.json", "--outDir", ".tmp/drawing-intelligence-core"],
+        [*resolve_node_command("npx"), "tsc", "-p", "drawing-intelligence-core/tsconfig.json", "--outDir", ".tmp/drawing-intelligence-core"],
         cwd=ROOT,
         check=True,
         capture_output=True,
         text=True,
+        encoding="utf-8",
     )
     output = subprocess.run(
         ["node", "--input-type=module", "-e", script],
@@ -20,6 +22,7 @@ def run_drawing_script(script: str):
         check=True,
         capture_output=True,
         text=True,
+        encoding="utf-8",
     ).stdout
     return json.loads(output)
 
@@ -60,11 +63,12 @@ console.log(JSON.stringify(part));
 
     def test_drawing_core_connects_to_manufacturing_core(self):
         subprocess.run(
-            ["npx", "tsc", "-p", "manufacturing-core/tsconfig.json", "--outDir", ".tmp/manufacturing-core"],
+            [*resolve_node_command("npx"), "tsc", "-p", "manufacturing-core/tsconfig.json", "--outDir", ".tmp/manufacturing-core"],
             cwd=ROOT,
             check=True,
             capture_output=True,
             text=True,
+            encoding="utf-8",
         )
         result = run_drawing_script(
             """
@@ -133,7 +137,7 @@ console.log(JSON.stringify(output));
         self.assertGreaterEqual(len(result["drawingIssueChecklist"]), 1)
 
     def test_shop_drawing_assistant_demo_page_contains_required_panels(self):
-        page = (ROOT / "agenticflow/frontend/src/pages/ShopDrawingAssistantDemo.tsx").read_text()
+        page = (ROOT / "agenticflow/frontend/src/pages/ShopDrawingAssistantDemo.tsx").read_text(encoding="utf-8")
 
         for required in [
             "Shop Drawing Assistant MVP",

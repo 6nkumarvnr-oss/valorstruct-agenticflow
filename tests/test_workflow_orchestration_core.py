@@ -2,17 +2,19 @@ from pathlib import Path
 import json
 import subprocess
 import unittest
+from command_utils import resolve_node_command
 
 ROOT = Path(__file__).resolve().parents[1]
 
 
 def run_orchestration_script(script: str):
     subprocess.run(
-        ["npx", "tsc", "-p", "workflow-orchestration-core/tsconfig.json", "--outDir", ".tmp/workflow-orchestration-core"],
+        [*resolve_node_command("npx"), "tsc", "-p", "workflow-orchestration-core/tsconfig.json", "--outDir", ".tmp/workflow-orchestration-core"],
         cwd=ROOT,
         check=True,
         capture_output=True,
         text=True,
+        encoding="utf-8",
     )
     output = subprocess.run(
         ["node", "--input-type=module", "-e", script],
@@ -20,6 +22,7 @@ def run_orchestration_script(script: str):
         check=True,
         capture_output=True,
         text=True,
+        encoding="utf-8",
     ).stdout
     return json.loads(output)
 
@@ -282,7 +285,7 @@ console.log(JSON.stringify({
         self.assertEqual(result["privateFallback"]["fallbackRole"], "local_private_model")
 
     def test_p_agent_orchestrates_package_and_stores_memory(self):
-        subprocess.run(["npx", "tsc", "-p", "agenticflow/tsconfig.json"], cwd=ROOT, check=True, capture_output=True, text=True)
+        subprocess.run([*resolve_node_command("npx"), "tsc", "-p", "agenticflow/tsconfig.json"], cwd=ROOT, check=True, capture_output=True, text=True, encoding="utf-8")
         output = subprocess.run(
             [
                 "node",
@@ -302,6 +305,7 @@ console.log(JSON.stringify({ plan: planner.createPlan(goal), result, memory: run
             check=True,
             capture_output=True,
             text=True,
+            encoding="utf-8",
         ).stdout
         payload = json.loads(output)
 
@@ -436,7 +440,7 @@ console.log(JSON.stringify({
         self.assertIn("BR-01", result["html"])
 
     def test_engineering_package_console_contains_required_panels(self):
-        page = (ROOT / "agenticflow/frontend/src/pages/EngineeringPackageConsole.tsx").read_text()
+        page = (ROOT / "agenticflow/frontend/src/pages/EngineeringPackageConsole.tsx").read_text(encoding="utf-8")
 
         for label in [
             "Input request box",

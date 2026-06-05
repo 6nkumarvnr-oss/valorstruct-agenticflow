@@ -41,63 +41,63 @@ from agenticflow.backend.persistence import GovernancePersistenceStore, SCHEMA_T
 class BackendPersistenceTest(unittest.TestCase):
     def test_schema_contains_required_governance_tables(self):
         with tempfile.TemporaryDirectory() as directory:
-            store = GovernancePersistenceStore(Path(directory) / "agenticflow.db")
-            self.assertEqual(set(SCHEMA_TABLES).issubset(set(store.table_names())), True)
-            for table in [
-                "roles",
-                "users",
-                "company_workspaces",
-                "workspace_memberships",
-                "auth_sessions",
-                "projects",
-                "package_runs",
-                "project_parts",
-                "project_level_package_runs",
-                "risk_classifications",
-                "approval_gates",
-                "approval_decisions",
-                "audit_events",
-                "model_role_audit_events",
-                "exports",
-            ]:
-                self.assertIn(table, store.table_names())
+            with GovernancePersistenceStore(Path(directory) / "agenticflow.db") as store:
+                self.assertEqual(set(SCHEMA_TABLES).issubset(set(store.table_names())), True)
+                for table in [
+                    "roles",
+                    "users",
+                    "company_workspaces",
+                    "workspace_memberships",
+                    "auth_sessions",
+                    "projects",
+                    "package_runs",
+                    "project_parts",
+                    "project_level_package_runs",
+                    "risk_classifications",
+                    "approval_gates",
+                    "approval_decisions",
+                    "audit_events",
+                    "model_role_audit_events",
+                    "exports",
+                ]:
+                    self.assertIn(table, store.table_names())
 
     def test_store_persists_package_run_governance_records(self):
         with tempfile.TemporaryDirectory() as directory:
-            store = GovernancePersistenceStore(Path(directory) / "agenticflow.db")
-            persisted = store.create_package_run(build_demo_package_run_payload())
+            with GovernancePersistenceStore(Path(directory) / "agenticflow.db") as store:
+                persisted = store.create_package_run(build_demo_package_run_payload())
 
-            self.assertEqual(persisted["project"]["id"], "project-bp-01")
-            self.assertEqual(persisted["packageRun"]["id"], "package-run-bp-01-001")
-            self.assertEqual(persisted["packageRun"]["workspaceId"], "valor-demo-workspace")
-            self.assertEqual(persisted["packageRun"]["createdByEmail"], "agent@valorstruct.local")
-            self.assertEqual(persisted["riskClassification"]["level"], 3)
-            self.assertEqual(persisted["riskClassification"]["requiredApprover"], "Senior Structural Engineer approval")
-            self.assertEqual(persisted["approvalGate"]["status"], "pending-licensed-expert-approval")
-            self.assertEqual(len(persisted["auditEvents"]), 5)
-            self.assertEqual(persisted["modelRoleAuditEvents"][1]["requestedRole"], "engineering_reasoning_model")
-            self.assertEqual(persisted["modelRoleAuditEvents"][1]["sensitiveDataRouteRole"], "local_private_model")
-            self.assertEqual({export["exportType"] for export in persisted["exports"]}, {"markdown", "json"})
+                self.assertEqual(persisted["project"]["id"], "project-bp-01")
+                self.assertEqual(persisted["packageRun"]["id"], "package-run-bp-01-001")
+                self.assertEqual(persisted["packageRun"]["workspaceId"], "valor-demo-workspace")
+                self.assertEqual(persisted["packageRun"]["createdByEmail"], "agent@valorstruct.local")
+                self.assertEqual(persisted["riskClassification"]["level"], 3)
+                self.assertEqual(persisted["riskClassification"]["requiredApprover"], "Senior Structural Engineer approval")
+                self.assertEqual(persisted["approvalGate"]["status"], "pending-licensed-expert-approval")
+                self.assertEqual(len(persisted["auditEvents"]), 5)
+                self.assertEqual(persisted["modelRoleAuditEvents"][1]["requestedRole"], "engineering_reasoning_model")
+                self.assertEqual(persisted["modelRoleAuditEvents"][1]["sensitiveDataRouteRole"], "local_private_model")
+                self.assertEqual({export["exportType"] for export in persisted["exports"]}, {"markdown", "json"})
 
     def test_approval_decision_updates_gate_and_package_status(self):
         with tempfile.TemporaryDirectory() as directory:
-            store = GovernancePersistenceStore(Path(directory) / "agenticflow.db")
-            store.create_package_run(build_demo_package_run_payload())
-            persisted = store.record_approval_decision(
-                "package-run-bp-01-001",
-                {
-                    "decision": "approved",
-                    "decidedBy": "Senior Structural Engineer",
-                    "userEmail": "senior.engineer@valorstruct.local",
-                    "reason": "Reviewed for demo release.",
-                    "decidedAt": "2026-06-03T01:00:00.000Z",
-                },
-            )
+            with GovernancePersistenceStore(Path(directory) / "agenticflow.db") as store:
+                store.create_package_run(build_demo_package_run_payload())
+                persisted = store.record_approval_decision(
+                    "package-run-bp-01-001",
+                    {
+                        "decision": "approved",
+                        "decidedBy": "Senior Structural Engineer",
+                        "userEmail": "senior.engineer@valorstruct.local",
+                        "reason": "Reviewed for demo release.",
+                        "decidedAt": "2026-06-03T01:00:00.000Z",
+                    },
+                )
 
-            self.assertEqual(persisted["packageRun"]["approvalStatus"], "approved")
-            self.assertEqual(persisted["approvalGate"]["status"], "approved")
-            self.assertEqual(persisted["approvalDecisions"][0]["decidedBy"], "Senior Structural Engineer")
-            self.assertEqual(persisted["approvalDecisions"][0]["userRole"], "Senior Structural Engineer")
+                self.assertEqual(persisted["packageRun"]["approvalStatus"], "approved")
+                self.assertEqual(persisted["approvalGate"]["status"], "approved")
+                self.assertEqual(persisted["approvalDecisions"][0]["decidedBy"], "Senior Structural Engineer")
+                self.assertEqual(persisted["approvalDecisions"][0]["userRole"], "Senior Structural Engineer")
 
     def test_backend_endpoint_functions_persist_demo_package_and_decision(self):
         schema = persistence_schema()
@@ -141,135 +141,135 @@ class BackendPersistenceTest(unittest.TestCase):
 
     def test_rejection_decision_updates_gate_and_package_status(self):
         with tempfile.TemporaryDirectory() as directory:
-            store = GovernancePersistenceStore(Path(directory) / "agenticflow.db")
-            store.create_package_run(build_demo_package_run_payload())
-            persisted = store.record_approval_decision(
-                "package-run-bp-01-001",
-                {
-                    "decision": "rejected",
-                    "decidedBy": "Senior Structural Engineer",
-                    "userEmail": "senior.engineer@valorstruct.local",
-                    "reason": "Needs engineering correction before issue.",
-                    "decidedAt": "2026-06-03T01:05:00.000Z",
-                },
-            )
+            with GovernancePersistenceStore(Path(directory) / "agenticflow.db") as store:
+                store.create_package_run(build_demo_package_run_payload())
+                persisted = store.record_approval_decision(
+                    "package-run-bp-01-001",
+                    {
+                        "decision": "rejected",
+                        "decidedBy": "Senior Structural Engineer",
+                        "userEmail": "senior.engineer@valorstruct.local",
+                        "reason": "Needs engineering correction before issue.",
+                        "decidedAt": "2026-06-03T01:05:00.000Z",
+                    },
+                )
 
-            self.assertEqual(persisted["packageRun"]["approvalStatus"], "rejected")
-            self.assertEqual(persisted["approvalGate"]["status"], "rejected")
-            self.assertEqual(persisted["approvalDecisions"][0]["decision"], "rejected")
-            self.assertEqual(persisted["approvalDecisions"][0]["userRole"], "Senior Structural Engineer")
+                self.assertEqual(persisted["packageRun"]["approvalStatus"], "rejected")
+                self.assertEqual(persisted["approvalGate"]["status"], "rejected")
+                self.assertEqual(persisted["approvalDecisions"][0]["decision"], "rejected")
+                self.assertEqual(persisted["approvalDecisions"][0]["userRole"], "Senior Structural Engineer")
 
     def test_demo_users_are_seeded_with_required_roles(self):
         with tempfile.TemporaryDirectory() as directory:
-            store = GovernancePersistenceStore(Path(directory) / "agenticflow.db")
-            users = store.list_users()
-            users_by_email = {user["email"]: user for user in users}
+            with GovernancePersistenceStore(Path(directory) / "agenticflow.db") as store:
+                users = store.list_users()
+                users_by_email = {user["email"]: user for user in users}
 
-            expected = {
-                "owner@valorstruct.local": "Owner",
-                "admin@valorstruct.local": "Admin",
-                "senior.engineer@valorstruct.local": "Senior Structural Engineer",
-                "engineer@valorstruct.local": "Engineer",
-                "reviewer@valorstruct.local": "Reviewer",
-                "viewer@valorstruct.local": "Viewer",
-                "agent@valorstruct.local": "Agent",
-            }
-            for email, role in expected.items():
-                self.assertEqual(users_by_email[email]["role"], role)
+                expected = {
+                    "owner@valorstruct.local": "Owner",
+                    "admin@valorstruct.local": "Admin",
+                    "senior.engineer@valorstruct.local": "Senior Structural Engineer",
+                    "engineer@valorstruct.local": "Engineer",
+                    "reviewer@valorstruct.local": "Reviewer",
+                    "viewer@valorstruct.local": "Viewer",
+                    "agent@valorstruct.local": "Agent",
+                }
+                for email, role in expected.items():
+                    self.assertEqual(users_by_email[email]["role"], role)
 
     def test_senior_structural_engineer_can_approve_level_3(self):
         with tempfile.TemporaryDirectory() as directory:
-            store = GovernancePersistenceStore(Path(directory) / "agenticflow.db")
-            store.create_package_run(build_demo_package_run_payload())
-            persisted = store.record_approval_decision(
-                "package-run-bp-01-001",
-                {
-                    "decision": "approved",
-                    "decidedBy": "Senior Structural Engineer",
-                    "userEmail": "senior.engineer@valorstruct.local",
-                    "reason": "Licensed engineering review complete.",
-                },
-            )
+            with GovernancePersistenceStore(Path(directory) / "agenticflow.db") as store:
+                store.create_package_run(build_demo_package_run_payload())
+                persisted = store.record_approval_decision(
+                    "package-run-bp-01-001",
+                    {
+                        "decision": "approved",
+                        "decidedBy": "Senior Structural Engineer",
+                        "userEmail": "senior.engineer@valorstruct.local",
+                        "reason": "Licensed engineering review complete.",
+                    },
+                )
 
-            self.assertEqual(persisted["packageRun"]["approvalStatus"], "approved")
-            self.assertEqual(persisted["approvalDecisions"][0]["userRole"], "Senior Structural Engineer")
+                self.assertEqual(persisted["packageRun"]["approvalStatus"], "approved")
+                self.assertEqual(persisted["approvalDecisions"][0]["userRole"], "Senior Structural Engineer")
 
     def test_engineer_cannot_approve_level_3(self):
         with tempfile.TemporaryDirectory() as directory:
-            store = GovernancePersistenceStore(Path(directory) / "agenticflow.db")
-            store.create_package_run(build_demo_package_run_payload())
-            persisted = store.record_approval_decision(
-                "package-run-bp-01-001",
-                {
-                    "decision": "approved",
-                    "decidedBy": "Project Engineer",
-                    "userEmail": "engineer@valorstruct.local",
-                    "reason": "Engineer attempted Level 3 approval.",
-                },
-            )
-
-            self.assertEqual(persisted["packageRun"]["approvalStatus"], "requires-review")
-            self.assertEqual(persisted["approvalGate"]["status"], "pending-licensed-expert-approval")
-            self.assertEqual(persisted["approvalDecisions"][0]["decision"], "blocked")
-            self.assertEqual(persisted["approvalDecisions"][0]["userRole"], "Engineer")
-
-    def test_owner_can_approve_level_4(self):
-        with tempfile.TemporaryDirectory() as directory:
-            store = GovernancePersistenceStore(Path(directory) / "agenticflow.db")
-            payload = self._payload_for_level("package-run-level-4", 4)
-            store.create_package_run(payload)
-            persisted = store.record_approval_decision(
-                "package-run-level-4",
-                {
-                    "decision": "approved",
-                    "decidedBy": "Valor Struct Owner",
-                    "userEmail": "owner@valorstruct.local",
-                    "reason": "Explicit owner authorization granted.",
-                },
-            )
-
-            self.assertEqual(persisted["packageRun"]["approvalStatus"], "approved")
-            self.assertEqual(persisted["approvalDecisions"][0]["userRole"], "Owner")
-
-    def test_agent_cannot_approve_level_2_3_or_4(self):
-        with tempfile.TemporaryDirectory() as directory:
-            store = GovernancePersistenceStore(Path(directory) / "agenticflow.db")
-            for level in [2, 3, 4]:
-                run_id = f"package-run-level-{level}"
-                store.create_package_run(self._payload_for_level(run_id, level))
+            with GovernancePersistenceStore(Path(directory) / "agenticflow.db") as store:
+                store.create_package_run(build_demo_package_run_payload())
                 persisted = store.record_approval_decision(
-                    run_id,
+                    "package-run-bp-01-001",
                     {
-                        "id": f"approval-decision-{run_id}",
                         "decision": "approved",
-                        "decidedBy": "AgenticFlow Agent",
-                        "userEmail": "agent@valorstruct.local",
-                        "reason": f"Agent attempted Level {level} approval.",
+                        "decidedBy": "Project Engineer",
+                        "userEmail": "engineer@valorstruct.local",
+                        "reason": "Engineer attempted Level 3 approval.",
                     },
                 )
 
                 self.assertEqual(persisted["packageRun"]["approvalStatus"], "requires-review")
+                self.assertEqual(persisted["approvalGate"]["status"], "pending-licensed-expert-approval")
                 self.assertEqual(persisted["approvalDecisions"][0]["decision"], "blocked")
-                self.assertEqual(persisted["approvalDecisions"][0]["userRole"], "Agent")
+                self.assertEqual(persisted["approvalDecisions"][0]["userRole"], "Engineer")
+
+    def test_owner_can_approve_level_4(self):
+        with tempfile.TemporaryDirectory() as directory:
+            with GovernancePersistenceStore(Path(directory) / "agenticflow.db") as store:
+                payload = self._payload_for_level("package-run-level-4", 4)
+                store.create_package_run(payload)
+                persisted = store.record_approval_decision(
+                    "package-run-level-4",
+                    {
+                        "decision": "approved",
+                        "decidedBy": "Valor Struct Owner",
+                        "userEmail": "owner@valorstruct.local",
+                        "reason": "Explicit owner authorization granted.",
+                    },
+                )
+
+                self.assertEqual(persisted["packageRun"]["approvalStatus"], "approved")
+                self.assertEqual(persisted["approvalDecisions"][0]["userRole"], "Owner")
+
+    def test_agent_cannot_approve_level_2_3_or_4(self):
+        with tempfile.TemporaryDirectory() as directory:
+            with GovernancePersistenceStore(Path(directory) / "agenticflow.db") as store:
+                for level in [2, 3, 4]:
+                    run_id = f"package-run-level-{level}"
+                    store.create_package_run(self._payload_for_level(run_id, level))
+                    persisted = store.record_approval_decision(
+                        run_id,
+                        {
+                            "id": f"approval-decision-{run_id}",
+                            "decision": "approved",
+                            "decidedBy": "AgenticFlow Agent",
+                            "userEmail": "agent@valorstruct.local",
+                            "reason": f"Agent attempted Level {level} approval.",
+                        },
+                    )
+
+                    self.assertEqual(persisted["packageRun"]["approvalStatus"], "requires-review")
+                    self.assertEqual(persisted["approvalDecisions"][0]["decision"], "blocked")
+                    self.assertEqual(persisted["approvalDecisions"][0]["userRole"], "Agent")
 
 
     def test_dashboard_summary_helper_reports_project_package_governance_totals(self):
         with tempfile.TemporaryDirectory() as directory:
-            store = GovernancePersistenceStore(Path(directory) / "agenticflow.db")
-            store.create_package_run(build_demo_package_run_payload())
-            summary = store.get_dashboard_summary()
+            with GovernancePersistenceStore(Path(directory) / "agenticflow.db") as store:
+                store.create_package_run(build_demo_package_run_payload())
+                summary = store.get_dashboard_summary()
 
-            self.assertEqual(summary["totalProjects"], 1)
-            self.assertEqual(summary["totalPackageRuns"], 1)
-            self.assertEqual(summary["pendingApprovals"], 1)
-            self.assertEqual(summary["approvedPackages"], 0)
-            self.assertEqual(summary["rejectedPackages"], 0)
-            self.assertEqual(summary["packagesByApprovalStatus"]["requires-review"], 1)
-            self.assertEqual(summary["packagesByRiskLevel"]["level3"], 1)
-            self.assertEqual(summary["riskLevelSummary"]["level3"], 1)
-            self.assertGreaterEqual(len(summary["recentAuditEvents"]), 1)
-            self.assertGreaterEqual(len(summary["recentModelRoleEvents"]), 1)
-            self.assertGreaterEqual(len(summary["recentExports"]), 1)
+                self.assertEqual(summary["totalProjects"], 1)
+                self.assertEqual(summary["totalPackageRuns"], 1)
+                self.assertEqual(summary["pendingApprovals"], 1)
+                self.assertEqual(summary["approvedPackages"], 0)
+                self.assertEqual(summary["rejectedPackages"], 0)
+                self.assertEqual(summary["packagesByApprovalStatus"]["requires-review"], 1)
+                self.assertEqual(summary["packagesByRiskLevel"]["level3"], 1)
+                self.assertEqual(summary["riskLevelSummary"]["level3"], 1)
+                self.assertGreaterEqual(len(summary["recentAuditEvents"]), 1)
+                self.assertGreaterEqual(len(summary["recentModelRoleEvents"]), 1)
+                self.assertGreaterEqual(len(summary["recentExports"]), 1)
 
     def test_dashboard_summary_endpoint_helper_returns_seeded_demo_summary(self):
         session = login(LoginRequest(email="senior.engineer@valorstruct.local", password="ValorDemo123!"))
@@ -316,39 +316,39 @@ class BackendPersistenceTest(unittest.TestCase):
 
     def test_auth_workspace_and_current_user_helpers(self):
         with tempfile.TemporaryDirectory() as directory:
-            store = GovernancePersistenceStore(Path(directory) / "agenticflow.db")
-            self.assertIn("company_workspaces", store.table_names())
-            self.assertIn("workspace_memberships", store.table_names())
+            with GovernancePersistenceStore(Path(directory) / "agenticflow.db") as store:
+                self.assertIn("company_workspaces", store.table_names())
+                self.assertIn("workspace_memberships", store.table_names())
 
-            user = store.authenticate_user("senior.engineer@valorstruct.local", "ValorDemo123!")
-            self.assertIsNotNone(user)
-            self.assertIsNone(store.authenticate_user("senior.engineer@valorstruct.local", "wrong-password"))
+                user = store.authenticate_user("senior.engineer@valorstruct.local", "ValorDemo123!")
+                self.assertIsNotNone(user)
+                self.assertIsNone(store.authenticate_user("senior.engineer@valorstruct.local", "wrong-password"))
 
-            token = store.issue_demo_token(user)  # type: ignore[arg-type]
-            current_user = store.get_current_user_from_token(f"Bearer {token}")
-            self.assertEqual(current_user["email"], "senior.engineer@valorstruct.local")
-            self.assertEqual(store.list_workspaces_for_user(current_user["userId"])[0]["workspaceId"], "valor-demo-workspace")
+                token = store.issue_demo_token(user)  # type: ignore[arg-type]
+                current_user = store.get_current_user_from_token(f"Bearer {token}")
+                self.assertEqual(current_user["email"], "senior.engineer@valorstruct.local")
+                self.assertEqual(store.list_workspaces_for_user(current_user["userId"])[0]["workspaceId"], "valor-demo-workspace")
 
-            persisted = store.create_package_run(build_demo_package_run_payload())
-            self.assertEqual(persisted["packageRun"]["workspaceId"], "valor-demo-workspace")
-            self.assertEqual(persisted["packageRun"]["createdByEmail"], "agent@valorstruct.local")
+                persisted = store.create_package_run(build_demo_package_run_payload())
+                self.assertEqual(persisted["packageRun"]["workspaceId"], "valor-demo-workspace")
+                self.assertEqual(persisted["packageRun"]["createdByEmail"], "agent@valorstruct.local")
 
-            approved = store.record_approval_decision_for_user("package-run-bp-01-001", current_user, "approved", "Approved through current-user flow.")
-            self.assertEqual(approved["packageRun"]["approvalStatus"], "approved")
+                approved = store.record_approval_decision_for_user("package-run-bp-01-001", current_user, "approved", "Approved through current-user flow.")
+                self.assertEqual(approved["packageRun"]["approvalStatus"], "approved")
 
     def test_current_user_approval_authority_enforces_role_levels(self):
         with tempfile.TemporaryDirectory() as directory:
-            store = GovernancePersistenceStore(Path(directory) / "agenticflow.db")
-            store.create_package_run(build_demo_package_run_payload())
-            engineer = store.authenticate_user("engineer@valorstruct.local", "ValorDemo123!")
-            with self.assertRaises(PermissionError):
-                store.record_approval_decision_for_user("package-run-bp-01-001", engineer, "approved", "Engineer attempted current-user approval.")  # type: ignore[arg-type]
+            with GovernancePersistenceStore(Path(directory) / "agenticflow.db") as store:
+                store.create_package_run(build_demo_package_run_payload())
+                engineer = store.authenticate_user("engineer@valorstruct.local", "ValorDemo123!")
+                with self.assertRaises(PermissionError):
+                    store.record_approval_decision_for_user("package-run-bp-01-001", engineer, "approved", "Engineer attempted current-user approval.")  # type: ignore[arg-type]
 
-            level4_payload = self._payload_for_level("package-run-level-4-owner", 4)
-            store.create_package_run(level4_payload)
-            owner = store.authenticate_user("owner@valorstruct.local", "ValorDemo123!")
-            approved = store.record_approval_decision_for_user("package-run-level-4-owner", owner, "approved", "Owner approved Level 4.")  # type: ignore[arg-type]
-            self.assertEqual(approved["approvalDecisions"][0]["userRole"], "Owner")
+                level4_payload = self._payload_for_level("package-run-level-4-owner", 4)
+                store.create_package_run(level4_payload)
+                owner = store.authenticate_user("owner@valorstruct.local", "ValorDemo123!")
+                approved = store.record_approval_decision_for_user("package-run-level-4-owner", owner, "approved", "Owner approved Level 4.")  # type: ignore[arg-type]
+                self.assertEqual(approved["approvalDecisions"][0]["userRole"], "Owner")
 
     def test_auth_endpoint_helpers_and_protected_package_flow(self):
         session = login(LoginRequest(email="senior.engineer@valorstruct.local", password="ValorDemo123!"))
@@ -374,69 +374,69 @@ class BackendPersistenceTest(unittest.TestCase):
 
     def test_project_part_helpers_persist_and_list_parts(self):
         with tempfile.TemporaryDirectory() as directory:
-            store = GovernancePersistenceStore(Path(directory) / "agenticflow.db")
-            store.create_project({
-                "id": "project-multi-part-test",
-                "name": "Multi-Part Demo Project",
-                "clientName": "Valor Struct Demo Client",
-            })
-            persisted = store.create_project_part({
-                "projectId": "project-multi-part-test",
-                "workspaceId": "valor-demo-workspace",
-                "partId": "BP-01",
-                "drawingNote": "BP-01 Plate 400x400x20 S275 with 4-M20 holes and 6mm fillet weld all around.",
-                "material": "S275",
-                "dimensions": "400x400x20",
-            })
-            parts = store.list_project_parts("project-multi-part-test")
+            with GovernancePersistenceStore(Path(directory) / "agenticflow.db") as store:
+                store.create_project({
+                    "id": "project-multi-part-test",
+                    "name": "Multi-Part Demo Project",
+                    "clientName": "Valor Struct Demo Client",
+                })
+                persisted = store.create_project_part({
+                    "projectId": "project-multi-part-test",
+                    "workspaceId": "valor-demo-workspace",
+                    "partId": "BP-01",
+                    "drawingNote": "BP-01 Plate 400x400x20 S275 with 4-M20 holes and 6mm fillet weld all around.",
+                    "material": "S275",
+                    "dimensions": "400x400x20",
+                })
+                parts = store.list_project_parts("project-multi-part-test")
 
-            self.assertEqual(persisted["partId"], "BP-01")
-            self.assertEqual(len(parts), 1)
-            self.assertEqual(parts[0]["drawingNote"], "BP-01 Plate 400x400x20 S275 with 4-M20 holes and 6mm fillet weld all around.")
+                self.assertEqual(persisted["partId"], "BP-01")
+                self.assertEqual(len(parts), 1)
+                self.assertEqual(parts[0]["drawingNote"], "BP-01 Plate 400x400x20 S275 with 4-M20 holes and 6mm fillet weld all around.")
 
     def test_project_level_package_run_persistence_helpers(self):
         with tempfile.TemporaryDirectory() as directory:
-            store = GovernancePersistenceStore(Path(directory) / "agenticflow.db")
-            payload = {
-                "id": "project-level-package-test-001",
-                "projectId": "project-multi-part-test",
-                "workspaceId": "valor-demo-workspace",
-                "projectName": "Multi-Part Demo Project",
-                "parts": [
-                    {
-                        "partId": "BP-01",
-                        "drawingNote": "BP-01 Plate 400x400x20 S275 with 4-M20 holes and 6mm fillet weld all around.",
-                        "material": "S275",
-                        "dimensions": "400x400x20",
-                    },
-                    {
-                        "partId": "BP-02",
-                        "drawingNote": "BP-02 Plate 400x400x20 S275 with 4-M20 holes and 6mm fillet weld all around.",
-                        "material": "S275",
-                        "dimensions": "400x400x20",
-                    },
-                    {
-                        "partId": "BR-01",
-                        "drawingNote": "BR-01 RHS80x40x2.8 S275 length 2.5m.",
-                        "material": "S275",
-                        "dimensions": "RHS80x40x2.8 length 2.5m",
-                    },
-                ],
-                "combinedBOQSummary": {"lineCount": 17, "materialKg": 48.92},
-                "combinedManufacturingSummary": {"totalEstimatedLaborHr": 3.3, "totalEstimatedProductionHr": 9.8},
-                "combinedQuotationSummary": {"currency": "SAR", "grandTotal": 837.94},
-                "approvalStatus": "requires-review",
-                "createdByEmail": "agent@valorstruct.local",
-            }
-            persisted = store.persist_project_level_package_run(payload)
-            listed = store.list_project_level_package_runs()
-            detail = store.get_project_level_package_run("project-level-package-test-001")
+            with GovernancePersistenceStore(Path(directory) / "agenticflow.db") as store:
+                payload = {
+                    "id": "project-level-package-test-001",
+                    "projectId": "project-multi-part-test",
+                    "workspaceId": "valor-demo-workspace",
+                    "projectName": "Multi-Part Demo Project",
+                    "parts": [
+                        {
+                            "partId": "BP-01",
+                            "drawingNote": "BP-01 Plate 400x400x20 S275 with 4-M20 holes and 6mm fillet weld all around.",
+                            "material": "S275",
+                            "dimensions": "400x400x20",
+                        },
+                        {
+                            "partId": "BP-02",
+                            "drawingNote": "BP-02 Plate 400x400x20 S275 with 4-M20 holes and 6mm fillet weld all around.",
+                            "material": "S275",
+                            "dimensions": "400x400x20",
+                        },
+                        {
+                            "partId": "BR-01",
+                            "drawingNote": "BR-01 RHS80x40x2.8 S275 length 2.5m.",
+                            "material": "S275",
+                            "dimensions": "RHS80x40x2.8 length 2.5m",
+                        },
+                    ],
+                    "combinedBOQSummary": {"lineCount": 17, "materialKg": 48.92},
+                    "combinedManufacturingSummary": {"totalEstimatedLaborHr": 3.3, "totalEstimatedProductionHr": 9.8},
+                    "combinedQuotationSummary": {"currency": "SAR", "grandTotal": 837.94},
+                    "approvalStatus": "requires-review",
+                    "createdByEmail": "agent@valorstruct.local",
+                }
+                persisted = store.persist_project_level_package_run(payload)
+                listed = store.list_project_level_package_runs()
+                detail = store.get_project_level_package_run("project-level-package-test-001")
 
-            self.assertEqual(persisted["projectId"], "project-multi-part-test")
-            self.assertEqual(persisted["combinedBOQSummary"]["lineCount"], 17)
-            self.assertEqual(detail["combinedManufacturingSummary"]["totalEstimatedProductionHr"], 9.8)
-            self.assertEqual(listed[0]["combinedQuotationSummary"]["grandTotal"], 837.94)
-            self.assertEqual(len(store.list_project_parts("project-multi-part-test")), 3)
+                self.assertEqual(persisted["projectId"], "project-multi-part-test")
+                self.assertEqual(persisted["combinedBOQSummary"]["lineCount"], 17)
+                self.assertEqual(detail["combinedManufacturingSummary"]["totalEstimatedProductionHr"], 9.8)
+                self.assertEqual(listed[0]["combinedQuotationSummary"]["grandTotal"], 837.94)
+                self.assertEqual(len(store.list_project_parts("project-multi-part-test")), 3)
 
     def test_multi_part_package_endpoint_helper_returns_deterministic_bp_01_bp_02_result(self):
         session = login(LoginRequest(email="senior.engineer@valorstruct.local", password="ValorDemo123!"))
