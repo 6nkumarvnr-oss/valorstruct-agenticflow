@@ -1,0 +1,13 @@
+{
+  "compilerOptions": {
+    "target": "ES2022",
+    "module": "NodeNext",
+    "moduleResolution": "NodeNext",
+    "strict": true,
+    "rootDir": "..",
+    "outDir": "../.tmp/engineering-capability-pack",
+    "declaration": true,
+    "skipLibCheck": true
+  },
+  "include": ["**/*.ts", "../engineering-core/**/*.ts"]
+}
