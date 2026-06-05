@@ -1,0 +1,11 @@
+export { getManufacturingSteelMaterial } from './materials/steel.js';
+export { calculatePlateVolumeM3, validatePlateDimensions } from './dimensions/plate-dimensions.js';
+export { calculateBasePlateWeight } from './shapes/base-plate.js';
+export { planPlasmaCut, planEdgeGrind } from './cutting/cutting-plan.js';
+export { planHoleDrilling } from './drilling/hole-plan.js';
+export { planFitUp, planWelding } from './welding/weld-planning.js';
+export { planCoating } from './coating/coating-plan.js';
+export { createBasePlateInspectionPlan } from './inspection/inspection-plan.js';
+export { estimateManufacturingCost } from './costing/cost-estimator.js';
+export { estimateBasePlateManufacturing, sampleBasePlateManufacturingInput } from './routing/production-router.js';
+export type { BasePlateManufacturingInput, ManufacturingEstimate, ManufacturingOperation, InspectionStep, PlateHoleInput } from './types.js';

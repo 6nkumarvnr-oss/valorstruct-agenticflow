@@ -1,0 +1,23 @@
+{
+  "compilerOptions": {
+    "target": "ES2022",
+    "module": "NodeNext",
+    "moduleResolution": "NodeNext",
+    "strict": true,
+    "rootDir": "..",
+    "outDir": "../.tmp/workflow-orchestration-core",
+    "declaration": true,
+    "skipLibCheck": true
+  },
+  "include": [
+    "**/*.ts",
+    "../agenticflow/capability-packs/**/*.ts",
+    "../engineering-capability-pack/**/*.ts",
+    "../engineering-core/**/*.ts",
+    "../engineering-science-core/**/*.ts",
+    "../knowledge-graph/**/*.ts",
+    "../manufacturing-core/**/*.ts",
+    "../drawing-to-boq-core/**/*.ts",
+    "../drawing-to-manufacturing-core/**/*.ts"
+  ]
+}

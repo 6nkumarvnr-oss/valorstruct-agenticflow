@@ -1,0 +1,30 @@
+{
+  "compilerOptions": {
+    "target": "ES2022",
+    "module": "NodeNext",
+    "moduleResolution": "NodeNext",
+    "strict": true,
+    "jsx": "preserve",
+    "rootDir": "..",
+    "outDir": "../.tmp",
+    "declaration": true,
+    "skipLibCheck": true
+  },
+  "include": [
+    "ai-gateway/**/*.ts",
+    "patchd-core/**/*.ts",
+    "capability-packs/**/*.ts",
+    "p-agent/**/*.ts",
+    "frontend/src/**/*.tsx",
+    "frontend/src/**/*.ts",
+    "frontend/src/**/*.d.ts",
+    "../engineering-core/**/*.ts",
+    "../engineering-capability-pack/**/*.ts",
+    "../knowledge-graph/**/*.ts",
+    "../workflow-orchestration-core/**/*.ts",
+    "../manufacturing-core/**/*.ts",
+    "../engineering-science-core/**/*.ts",
+    "../drawing-to-boq-core/**/*.ts",
+    "../drawing-to-manufacturing-core/**/*.ts"
+  ]
+}
