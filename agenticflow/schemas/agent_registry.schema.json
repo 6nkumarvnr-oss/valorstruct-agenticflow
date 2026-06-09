@@ -1,0 +1,24 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://valorstruct.ai/schemas/agent_registry.schema.json",
+  "title": "AgenticFlow Agent Registry Entry",
+  "type": "object",
+  "required": ["agentId", "agentName", "agentType", "ownerDomain", "allowedInputs", "allowedOutputs", "capabilityPackIds", "riskLevel", "approvalRequired", "modelRole", "toolsAllowed", "dataAccessScope", "auditLevel"],
+  "properties": {
+    "agentId": { "type": "string" },
+    "agentName": { "type": "string" },
+    "agentType": { "enum": ["planner", "specialist", "critic", "verifier", "synthesizer", "governance_judge", "human_approver"] },
+    "ownerDomain": { "type": "string" },
+    "allowedInputs": { "type": "array", "items": { "type": "string" } },
+    "allowedOutputs": { "type": "array", "items": { "type": "string" } },
+    "capabilityPackIds": { "type": "array", "items": { "type": "string" } },
+    "riskLevel": { "enum": ["low", "medium", "high", "critical"] },
+    "approvalRequired": { "enum": ["not_required", "recommended", "required"] },
+    "modelRole": { "type": "string" },
+    "toolsAllowed": { "type": "array", "items": { "type": "string" } },
+    "dataAccessScope": { "type": "string" },
+    "auditLevel": { "enum": ["standard", "strict"] },
+    "fallbackAgentId": { "type": "string" }
+  },
+  "additionalProperties": false
+}

@@ -124,6 +124,94 @@ class ApprovalActionRequest(BaseModel):
     reason: str = "Approval decision recorded by logged-in user."
 
 
+
+
+class GovernedSwarmRunRequest(BaseModel):
+    request: str = "Prepare governed engineering quotation package for BP-01"
+
+
+def build_governed_swarm_run(request: str) -> dict[str, object]:
+    cleaned_request = request.strip() or "Prepare governed engineering quotation package for BP-01"
+    lowered = cleaned_request.lower()
+    risk_level = "high" if any(word in lowered for word in ["engineering", "quotation", "manufacturing", "boq", "drawing", "release"]) else "medium"
+    selected_agents = [
+        {
+            "agentId": "planner.agenticflow.v1",
+            "agentName": "P-Agent Planner",
+            "agentType": "planner",
+            "ownerDomain": "agenticflow-core",
+            "modelRole": "reasoning_model",
+            "approvalRequired": "recommended",
+        },
+        {
+            "agentId": "engineering.critic.v1",
+            "agentName": "Engineering Critic",
+            "agentType": "critic",
+            "ownerDomain": "engineering",
+            "modelRole": "engineering_reasoning_model",
+            "approvalRequired": "required",
+        },
+        {
+            "agentId": "quotation.specialist.v1",
+            "agentName": "Valor Quotation Specialist",
+            "agentType": "specialist",
+            "ownerDomain": "commercial",
+            "modelRole": "engineering_reasoning_model",
+            "approvalRequired": "required",
+        },
+        {
+            "agentId": "governance.judge.v1",
+            "agentName": "PatchD Governance Judge",
+            "agentType": "governance_judge",
+            "ownerDomain": "governance",
+            "modelRole": "policy_reasoning_model",
+            "approvalRequired": "required",
+        },
+    ]
+    return {
+        "runId": "gsrp-api-demo",
+        "request": cleaned_request,
+        "riskLevel": risk_level,
+        "humanApprovalRequired": True,
+        "selectedAgents": selected_agents,
+        "selectedPlan": [
+            "Run PatchD governance scan",
+            "Create P-Agent plan",
+            "Route to governed specialists",
+            "Run critic and verifier checks",
+            "Prepare human approval packet",
+        ],
+        "candidateOutputs": [
+            {
+                "agentId": "planner.agenticflow.v1",
+                "summary": "Draft governed execution plan with capability contracts and audit events.",
+                "confidenceScore": 0.82,
+                "riskScore": 0.72,
+            }
+        ],
+        "critiques": [
+            {
+                "criticAgentId": "engineering.critic.v1",
+                "targetAgentId": "planner.agenticflow.v1",
+                "findings": ["Confirm drawing revision", "Confirm human approval before issue"],
+                "recommendation": "revise",
+            }
+        ],
+        "verification": {
+            "status": "requires_human_review",
+            "checksPassed": ["agent_registry_selected", "approval_required_detected"],
+            "checksFailed": ["human_approval_not_yet_recorded"],
+        },
+        "governanceDecision": "requires_human_approval",
+        "auditEvents": [
+            "GSRP_REQUEST_RECEIVED",
+            "GSRP_RISK_CLASSIFIED",
+            "GSRP_AGENTS_SELECTED",
+            "GSRP_GOVERNANCE_DECISION_RECORDED",
+        ],
+    }
+
+
 class MultiPartPackageRunRequest(BaseModel):
     projectName: str = "Valor Struct Multi-Part Demo Project"
     drawingNotes: str = "BP-01 Plate 400x400x20 S275 with 4-M20 holes and 6mm fillet weld all around.\nBP-02 Plate 300x300x16 S275 with 4-M16 holes and 6mm fillet weld all around.\nBR-01 RHS80x40x2.8 S275 length 2.5m."
@@ -166,6 +254,12 @@ def require_admin_user(authorization: str | None = None) -> dict[str, object]:
         raise HTTPException(status_code=403, detail=error_response("ADMIN_ROLE_REQUIRED", "Owner or Admin role is required for storage administration helpers.")["error"])
     return user
 
+
+
+
+@app.post("/governed-swarm/run")
+def run_governed_swarm(payload: GovernedSwarmRunRequest) -> dict[str, object]:
+    return build_governed_swarm_run(payload.request)
 
 @app.get("/health")
 def health() -> dict[str, str]:

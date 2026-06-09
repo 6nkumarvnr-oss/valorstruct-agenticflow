@@ -8,6 +8,7 @@
     "test:ts": "npx tsc -p agenticflow/tsconfig.json --noEmit && npx tsc -p engineering-core/tsconfig.json --noEmit && npx tsc -p engineering-capability-pack/tsconfig.json --noEmit && npx tsc -p engineering-science-core/tsconfig.json --noEmit && npx tsc -p manufacturing-core/tsconfig.json --noEmit && npx tsc -p drawing-intelligence-core/tsconfig.json --noEmit && npx tsc -p knowledge-graph/tsconfig.json --noEmit && npx tsc -p drawing-to-boq-core/tsconfig.json --noEmit && npx tsc -p drawing-to-manufacturing-core/tsconfig.json --noEmit && npx tsc -p workflow-orchestration-core/tsconfig.json --noEmit",
     "vertical-slice": "node scripts/clean-tmp.js && npx tsc -p agenticflow/tsconfig.json && node .tmp/agenticflow/patchd-core/vertical-slice/runVerticalSlice.js"
   },
-  "dependencies": {},
-  "devDependencies": {}
+  "devDependencies": {
+    "typescript": "^6.0.3"
+  }
 }

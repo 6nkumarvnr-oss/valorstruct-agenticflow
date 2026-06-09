@@ -1,0 +1,21 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://valorstruct.ai/schemas/capability_contract.schema.json",
+  "title": "AgenticFlow Capability Contract",
+  "type": "object",
+  "required": ["capabilityId", "name", "ownerDomain", "inputs", "outputs", "preconditions", "postconditions", "riskFlags", "auditEvents", "humanApproval", "rollbackMethod"],
+  "properties": {
+    "capabilityId": { "type": "string" },
+    "name": { "type": "string" },
+    "ownerDomain": { "type": "string" },
+    "inputs": { "type": "array", "items": { "type": "string" } },
+    "outputs": { "type": "array", "items": { "type": "string" } },
+    "preconditions": { "type": "array", "items": { "type": "string" } },
+    "postconditions": { "type": "array", "items": { "type": "string" } },
+    "riskFlags": { "type": "array", "items": { "type": "string" } },
+    "auditEvents": { "type": "array", "items": { "type": "string" } },
+    "humanApproval": { "enum": ["not_required", "recommended", "required"] },
+    "rollbackMethod": { "type": "string" }
+  },
+  "additionalProperties": false
+}

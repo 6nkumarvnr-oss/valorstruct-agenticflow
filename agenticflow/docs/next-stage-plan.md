@@ -117,3 +117,22 @@ AgenticFlow now includes deployment-oriented MVP hardening while preserving SQLi
 - `agenticflow/docs/deployment-hardening.md` documents local backend/frontend startup, required environment variables, SQLite demo mode, PostgreSQL future mode, snapshot backup instructions, browser print/PDF workflow, and production hardening warnings.
 
 Production deployments must replace the demo auth secret, disable demo mode, restrict CORS origins, harden auth/session handling, and move beyond SQLite for SaaS-scale operation.
+
+
+## Governed Swarm Reasoning Protocol addition
+
+The next-stage architecture now includes a controlled research-protocol layer named Governed Swarm Reasoning Protocol (GSRP). The implementation adds:
+
+```text
+Agent registry
+Capability contracts
+Swarm run result structure
+Backend /governed-swarm/run endpoint
+Frontend GovernedSwarmConsole page module
+Research protocol documentation
+JSON schemas
+```
+
+This layer must remain governed by PatchD and must require human approval for engineering, quotation, manufacturing, deployment, legal, or public-release decisions.
+
+Software architecture draft prepared for human review and approval.
