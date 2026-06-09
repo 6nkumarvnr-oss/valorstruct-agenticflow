@@ -24,6 +24,7 @@ SCHEMA_TABLES = [
     "exports",
     "gsrp_runs",
     "gsrp_approval_decisions",
+    "gsrp_agent_performance",
 ]
 
 REQUIRED_ROLES = [
@@ -263,6 +264,20 @@ class GovernancePersistenceStore:
                 user_role TEXT NOT NULL,
                 reason TEXT NOT NULL,
                 decided_at TEXT NOT NULL
+            );
+
+            CREATE TABLE IF NOT EXISTS gsrp_agent_performance (
+                agent_id TEXT PRIMARY KEY,
+                agent_name TEXT NOT NULL,
+                agent_type TEXT NOT NULL,
+                owner_domain TEXT NOT NULL,
+                total_runs INTEGER NOT NULL,
+                approvals INTEGER NOT NULL,
+                rejections INTEGER NOT NULL,
+                revision_requests INTEGER NOT NULL,
+                score REAL NOT NULL,
+                last_decision TEXT NOT NULL,
+                last_updated_at TEXT NOT NULL
             );
             """
         )
@@ -790,6 +805,10 @@ class GovernancePersistenceStore:
         rows = self.connection.execute("SELECT * FROM gsrp_runs ORDER BY created_at DESC, id").fetchall()
         return [_gsrp_run_row_to_dict(row, self.list_gsrp_approval_decisions(str(row["id"]))) for row in rows]
 
+    def list_gsrp_runs_for_user(self, user: dict[str, Any]) -> list[dict[str, Any]]:
+        workspace_ids = {workspace["workspaceId"] for workspace in self.list_workspaces_for_user(str(user["userId"]))}
+        return [run for run in self.list_gsrp_runs() if run["workspaceId"] in workspace_ids]
+
     def get_gsrp_run(self, run_id: str) -> dict[str, Any]:
         row = self.connection.execute("SELECT * FROM gsrp_runs WHERE id = ?", (run_id,)).fetchone()
         if row is None:
@@ -834,6 +853,79 @@ class GovernancePersistenceStore:
         self.connection.execute("UPDATE gsrp_runs SET approval_status = ? WHERE id = ?", (approval_status, run_id))
         self.connection.commit()
         return self.get_gsrp_run(run_id)
+
+    def require_gsrp_approval_authority(self, user: dict[str, Any], run_id: str) -> dict[str, Any]:
+        run = self.get_gsrp_run(run_id)
+        self.require_workspace_access(user, run["workspaceId"])
+        if user.get("role") not in {"Owner", "Admin", "Senior Structural Engineer", "Reviewer"}:
+            raise PermissionError(f"{user.get('role')} cannot approve GSRP runs.")
+        return {"allowed": True, "userEmail": user["email"], "userRole": user["role"], "runId": run_id}
+
+    def record_gsrp_approval_decision_for_user(self, run_id: str, user: dict[str, Any], decision: str, reason: str) -> dict[str, Any]:
+        self.require_gsrp_approval_authority(user, run_id)
+        self.record_gsrp_approval_decision(run_id, {
+            "decision": decision,
+            "decidedBy": user["displayName"],
+            "userEmail": user["email"],
+            "reason": reason,
+            "decidedAt": DEMO_CREATED_AT,
+        })
+        self.update_gsrp_agent_performance_from_decision(run_id, str(decision).lower())
+        return self.get_gsrp_run(run_id)
+
+    def update_gsrp_agent_performance_from_decision(self, run_id: str, decision: str) -> list[dict[str, Any]]:
+        run = self.get_gsrp_run(run_id)
+        normalized = "needs_revision" if decision == "needs-revision" else decision
+        for agent in list(run.get("selectedAgents", [])):
+            existing = self.connection.execute("SELECT * FROM gsrp_agent_performance WHERE agent_id = ?", (agent["agentId"],)).fetchone()
+            total_runs = int(existing["total_runs"]) if existing else 0
+            approvals = int(existing["approvals"]) if existing else 0
+            rejections = int(existing["rejections"]) if existing else 0
+            revision_requests = int(existing["revision_requests"]) if existing else 0
+            total_runs += 1
+            if normalized == "approved":
+                approvals += 1
+            elif normalized == "rejected":
+                rejections += 1
+            else:
+                revision_requests += 1
+            score = round(max(0.0, min(1.0, (approvals + 0.5 * revision_requests) / total_runs)), 3)
+            record = {
+                "agentId": agent["agentId"],
+                "agentName": agent["agentName"],
+                "agentType": agent["agentType"],
+                "ownerDomain": agent.get("ownerDomain", "unknown"),
+                "totalRuns": total_runs,
+                "approvals": approvals,
+                "rejections": rejections,
+                "revisionRequests": revision_requests,
+                "score": score,
+                "lastDecision": normalized,
+                "lastUpdatedAt": DEMO_CREATED_AT,
+            }
+            self.connection.execute(
+                """
+                INSERT OR REPLACE INTO gsrp_agent_performance
+                (agent_id, agent_name, agent_type, owner_domain, total_runs, approvals, rejections, revision_requests, score, last_decision, last_updated_at)
+                VALUES (:agentId, :agentName, :agentType, :ownerDomain, :totalRuns, :approvals, :rejections, :revisionRequests, :score, :lastDecision, :lastUpdatedAt)
+                """,
+                record,
+            )
+        self.connection.commit()
+        return self.list_gsrp_agent_performance()
+
+    def list_gsrp_agent_performance(self) -> list[dict[str, Any]]:
+        rows = self.connection.execute("SELECT * FROM gsrp_agent_performance ORDER BY score DESC, total_runs DESC, agent_id").fetchall()
+        return [_gsrp_agent_performance_row_to_dict(row) for row in rows]
+
+    def get_gsrp_learning_summary(self) -> dict[str, Any]:
+        performance = self.list_gsrp_agent_performance()
+        return {
+            "trackedAgents": len(performance),
+            "averageScore": round(sum(float(agent["score"]) for agent in performance) / len(performance), 3) if performance else 0.0,
+            "topAgents": performance[:3],
+            "improvementRule": "Approved runs increase confidence; revision requests produce partial confidence; rejections reduce confidence. Human approval remains mandatory for high-risk work.",
+        }
 
     def _package_risk_level(self, package_run_id: str) -> int:
         row = self.connection.execute(
@@ -1084,4 +1176,20 @@ def _gsrp_approval_decision_row_to_dict(row: sqlite3.Row) -> dict[str, Any]:
         "userRole": row["user_role"],
         "reason": row["reason"],
         "decidedAt": row["decided_at"],
+    }
+
+
+def _gsrp_agent_performance_row_to_dict(row: sqlite3.Row) -> dict[str, Any]:
+    return {
+        "agentId": row["agent_id"],
+        "agentName": row["agent_name"],
+        "agentType": row["agent_type"],
+        "ownerDomain": row["owner_domain"],
+        "totalRuns": row["total_runs"],
+        "approvals": row["approvals"],
+        "rejections": row["rejections"],
+        "revisionRequests": row["revision_requests"],
+        "score": row["score"],
+        "lastDecision": row["last_decision"],
+        "lastUpdatedAt": row["last_updated_at"],
     }

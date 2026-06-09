@@ -143,3 +143,12 @@ Software architecture draft prepared for human review and approval.
 Phase 6 adds persistent storage and approval history for Governed Swarm Reasoning Protocol runs. New backend tables are `gsrp_runs` and `gsrp_approval_decisions`; new API endpoints support creating, listing, retrieving, and approving/rejecting/revision-requesting GSRP runs. A new `GovernedSwarmHistoryConsole` page module demonstrates the approval history UI pattern.
 
 Software architecture draft prepared for human review and approval.
+
+
+## GSRP Phase 7–8 auth and learning update
+
+Phase 7 protects GSRP run creation, run listing, run detail, and approval decisions behind authenticated user/workspace checks. Phase 8 adds the `gsrp_agent_performance` table and a governed learning loop where human approval outcomes update advisory agent confidence scores. Scores support routing and review prioritization only; they do not replace human approval gates.
+
+Next recommended phase is a full-stack factory deployment plan using Vercel as the frontend control room, Cloud Run as the backend factory engine, and Postgres as the production database.
+
+Software architecture draft prepared for human review and approval.

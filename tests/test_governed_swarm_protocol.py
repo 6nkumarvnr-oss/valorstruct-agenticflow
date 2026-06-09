@@ -107,20 +107,57 @@ console.log(JSON.stringify({ agentCount: AGENT_REGISTRY.length, contractCount: C
         from agenticflow.backend.main import (
             GovernedSwarmRunRequest,
             GSRPApprovalDecisionRequest,
+            LoginRequest,
             create_persisted_governed_swarm_run,
+            get_governed_swarm_agent_performance,
             get_governed_swarm_run,
             list_governed_swarm_runs,
+            login,
             record_governed_swarm_approval,
         )
 
-        persisted = create_persisted_governed_swarm_run(GovernedSwarmRunRequest(request="Prepare engineering quotation package for BP-01"))
+        auth = login(LoginRequest(email="senior.engineer@valorstruct.local", password="ValorDemo123!"))
+        token = f"Bearer {auth['token']}"
+        persisted = create_persisted_governed_swarm_run(GovernedSwarmRunRequest(request="Prepare engineering quotation package for BP-01"), token)
         self.assertEqual(persisted["governanceDecision"], "requires_human_approval")
-        self.assertIn(persisted["id"], {run["id"] for run in list_governed_swarm_runs()})
-        detail = get_governed_swarm_run(persisted["id"])
+        self.assertEqual(persisted["createdByEmail"], "senior.engineer@valorstruct.local")
+        self.assertIn(persisted["id"], {run["id"] for run in list_governed_swarm_runs(token)})
+        detail = get_governed_swarm_run(persisted["id"], token)
         self.assertEqual(detail["request"], persisted["request"])
-        decided = record_governed_swarm_approval(persisted["id"], GSRPApprovalDecisionRequest(decision="needs_revision"))
+        decided = record_governed_swarm_approval(persisted["id"], GSRPApprovalDecisionRequest(decision="needs_revision"), token)
         self.assertEqual(decided["approvalStatus"], "needs-revision")
         self.assertEqual(decided["approvalDecisions"][-1]["decision"], "needs_revision")
+        learning = get_governed_swarm_agent_performance(token)
+        self.assertGreaterEqual(learning["trackedAgents"], 4)
+        self.assertGreaterEqual(learning["averageScore"], 0.5)
+
+
+    def test_gsrp_routes_require_authentication_and_use_user_for_approval(self):
+        import sys
+        sys.path.insert(0, str(ROOT))
+        from fastapi import HTTPException
+        from agenticflow.backend.main import (
+            GovernedSwarmRunRequest,
+            GSRPApprovalDecisionRequest,
+            LoginRequest,
+            create_persisted_governed_swarm_run,
+            login,
+            record_governed_swarm_approval,
+        )
+
+        with self.assertRaises(HTTPException):
+            create_persisted_governed_swarm_run(GovernedSwarmRunRequest(request="Prepare quotation package"), None)
+
+        engineer_auth = login(LoginRequest(email="engineer@valorstruct.local", password="ValorDemo123!"))
+        senior_auth = login(LoginRequest(email="senior.engineer@valorstruct.local", password="ValorDemo123!"))
+        persisted = create_persisted_governed_swarm_run(GovernedSwarmRunRequest(request="Prepare quotation package"), f"Bearer {senior_auth['token']}")
+
+        with self.assertRaises(HTTPException):
+            record_governed_swarm_approval(persisted["id"], GSRPApprovalDecisionRequest(decision="approved"), f"Bearer {engineer_auth['token']}")
+
+        approved = record_governed_swarm_approval(persisted["id"], GSRPApprovalDecisionRequest(decision="approved"), f"Bearer {senior_auth['token']}")
+        self.assertEqual(approved["approvalStatus"], "approved")
+        self.assertEqual(approved["approvalDecisions"][-1]["userEmail"], "senior.engineer@valorstruct.local")
 
     def test_gsrp_history_console_exists_with_approval_actions(self):
         history_console = (ROOT / "agenticflow/frontend/src/pages/GovernedSwarmHistoryConsole.tsx").read_text()
@@ -128,6 +165,12 @@ console.log(JSON.stringify({ agentCount: AGENT_REGISTRY.length, contractCount: C
         self.assertIn("approve GSRP run", history_console)
         self.assertIn("request revision", history_console)
         self.assertIn("reject GSRP run", history_console)
+
+    def test_gsrp_learning_console_exists_with_performance_scores(self):
+        learning_console = (ROOT / "agenticflow/frontend/src/pages/GovernedSwarmLearningConsole.tsx").read_text()
+        self.assertIn("Governed Swarm Learning Loop", learning_console)
+        self.assertIn("agent performance table", learning_console)
+        self.assertIn("Scores guide routing", learning_console)
 
 
 if __name__ == "__main__":

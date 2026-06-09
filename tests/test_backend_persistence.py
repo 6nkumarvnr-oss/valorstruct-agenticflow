@@ -61,6 +61,7 @@ class BackendPersistenceTest(unittest.TestCase):
                     "exports",
                     "gsrp_runs",
                     "gsrp_approval_decisions",
+                    "gsrp_agent_performance",
                 ]:
                     self.assertIn(table, store.table_names())
 
