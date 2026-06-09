@@ -72,5 +72,63 @@ console.log(JSON.stringify({ agentCount: AGENT_REGISTRY.length, contractCount: C
         self.assertTrue(any(agent["agentId"] == "quotation.specialist.v1" for agent in result["selectedAgents"]))
 
 
+    def test_gsrp_runs_persist_and_record_human_approval(self):
+        import sys
+        import tempfile
+        sys.path.insert(0, str(ROOT))
+        from agenticflow.backend.main import build_governed_swarm_run
+        from agenticflow.backend.persistence import GovernancePersistenceStore
+
+        with tempfile.TemporaryDirectory() as directory:
+            store = GovernancePersistenceStore(Path(directory) / "agenticflow.db")
+            try:
+                run = build_governed_swarm_run("Prepare engineering quotation package for BP-01")
+                persisted = store.persist_gsrp_run({"run": run, "createdByEmail": "agent@valorstruct.local"})
+                self.assertEqual(persisted["id"], run["runId"])
+                self.assertEqual(persisted["approvalStatus"], "pending-human-approval")
+                self.assertTrue(persisted["humanApprovalRequired"])
+                self.assertIn("governance.judge.v1", {agent["agentId"] for agent in persisted["selectedAgents"]})
+
+                approved = store.record_gsrp_approval_decision(persisted["id"], {
+                    "decision": "approved",
+                    "decidedBy": "Senior Structural Engineer",
+                    "userEmail": "senior.engineer@valorstruct.local",
+                    "reason": "GSRP package reviewed for controlled research release.",
+                })
+                self.assertEqual(approved["approvalStatus"], "approved")
+                self.assertEqual(approved["approvalDecisions"][0]["userRole"], "Senior Structural Engineer")
+                self.assertEqual(store.list_gsrp_runs()[0]["id"], persisted["id"])
+            finally:
+                store.close()
+
+    def test_backend_gsrp_helpers_create_list_get_and_approve(self):
+        import sys
+        sys.path.insert(0, str(ROOT))
+        from agenticflow.backend.main import (
+            GovernedSwarmRunRequest,
+            GSRPApprovalDecisionRequest,
+            create_persisted_governed_swarm_run,
+            get_governed_swarm_run,
+            list_governed_swarm_runs,
+            record_governed_swarm_approval,
+        )
+
+        persisted = create_persisted_governed_swarm_run(GovernedSwarmRunRequest(request="Prepare engineering quotation package for BP-01"))
+        self.assertEqual(persisted["governanceDecision"], "requires_human_approval")
+        self.assertIn(persisted["id"], {run["id"] for run in list_governed_swarm_runs()})
+        detail = get_governed_swarm_run(persisted["id"])
+        self.assertEqual(detail["request"], persisted["request"])
+        decided = record_governed_swarm_approval(persisted["id"], GSRPApprovalDecisionRequest(decision="needs_revision"))
+        self.assertEqual(decided["approvalStatus"], "needs-revision")
+        self.assertEqual(decided["approvalDecisions"][-1]["decision"], "needs_revision")
+
+    def test_gsrp_history_console_exists_with_approval_actions(self):
+        history_console = (ROOT / "agenticflow/frontend/src/pages/GovernedSwarmHistoryConsole.tsx").read_text()
+        self.assertIn("Governed Swarm Approval History", history_console)
+        self.assertIn("approve GSRP run", history_console)
+        self.assertIn("request revision", history_console)
+        self.assertIn("reject GSRP run", history_console)
+
+
 if __name__ == "__main__":
     unittest.main()

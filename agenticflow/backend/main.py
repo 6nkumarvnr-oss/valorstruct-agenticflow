@@ -128,6 +128,16 @@ class ApprovalActionRequest(BaseModel):
 
 class GovernedSwarmRunRequest(BaseModel):
     request: str = "Prepare governed engineering quotation package for BP-01"
+    workspaceId: str = DEMO_WORKSPACE_ID
+    createdByEmail: str = "agent@valorstruct.local"
+
+
+class GSRPApprovalDecisionRequest(BaseModel):
+    decision: str = "approved"
+    decidedBy: str = "Senior Structural Engineer"
+    userEmail: str = DEFAULT_APPROVER_EMAIL
+    reason: str = "GSRP approval decision recorded after human review."
+    decidedAt: str = "2026-06-09T00:00:00.000Z"
 
 
 def build_governed_swarm_run(request: str) -> dict[str, object]:
@@ -257,9 +267,54 @@ def require_admin_user(authorization: str | None = None) -> dict[str, object]:
 
 
 
+def create_persisted_governed_swarm_run(payload: GovernedSwarmRunRequest) -> dict[str, object]:
+    run = build_governed_swarm_run(payload.request)
+    return persistence_store.persist_gsrp_run({
+        "run": run,
+        "workspaceId": payload.workspaceId,
+        "createdByEmail": payload.createdByEmail,
+        "request": payload.request,
+    })
+
+
+def list_governed_swarm_runs() -> list[dict[str, object]]:
+    return persistence_store.list_gsrp_runs()
+
+
+def get_governed_swarm_run(run_id: str) -> dict[str, object]:
+    try:
+        return persistence_store.get_gsrp_run(run_id)
+    except ValueError as exc:
+        raise HTTPException(status_code=404, detail=error_response("GSRP_RUN_NOT_FOUND", str(exc))["error"]) from exc
+
+
+def record_governed_swarm_approval(run_id: str, decision: GSRPApprovalDecisionRequest) -> dict[str, object]:
+    try:
+        return persistence_store.record_gsrp_approval_decision(run_id, decision.model_dump())
+    except PermissionError as exc:
+        raise HTTPException(status_code=403, detail=error_response("GSRP_APPROVAL_DENIED", str(exc))["error"]) from exc
+    except ValueError as exc:
+        raise HTTPException(status_code=400, detail=error_response("GSRP_APPROVAL_INVALID", str(exc))["error"]) from exc
+
+
 @app.post("/governed-swarm/run")
 def run_governed_swarm(payload: GovernedSwarmRunRequest) -> dict[str, object]:
-    return build_governed_swarm_run(payload.request)
+    return create_persisted_governed_swarm_run(payload)
+
+
+@app.get("/governed-swarm/runs")
+def get_governed_swarm_runs() -> list[dict[str, object]]:
+    return list_governed_swarm_runs()
+
+
+@app.get("/governed-swarm/runs/{run_id}")
+def get_governed_swarm_run_detail(run_id: str) -> dict[str, object]:
+    return get_governed_swarm_run(run_id)
+
+
+@app.post("/governed-swarm/runs/{run_id}/approval")
+def approve_governed_swarm_run(run_id: str, decision: GSRPApprovalDecisionRequest) -> dict[str, object]:
+    return record_governed_swarm_approval(run_id, decision)
 
 @app.get("/health")
 def health() -> dict[str, str]:

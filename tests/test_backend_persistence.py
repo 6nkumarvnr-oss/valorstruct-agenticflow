@@ -59,6 +59,8 @@ class BackendPersistenceTest(unittest.TestCase):
                     "audit_events",
                     "model_role_audit_events",
                     "exports",
+                    "gsrp_runs",
+                    "gsrp_approval_decisions",
                 ]:
                     self.assertIn(table, store.table_names())
 

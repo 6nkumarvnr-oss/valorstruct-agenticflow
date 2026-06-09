@@ -136,3 +136,10 @@ JSON schemas
 This layer must remain governed by PatchD and must require human approval for engineering, quotation, manufacturing, deployment, legal, or public-release decisions.
 
 Software architecture draft prepared for human review and approval.
+
+
+## GSRP Phase 6 persistence update
+
+Phase 6 adds persistent storage and approval history for Governed Swarm Reasoning Protocol runs. New backend tables are `gsrp_runs` and `gsrp_approval_decisions`; new API endpoints support creating, listing, retrieving, and approving/rejecting/revision-requesting GSRP runs. A new `GovernedSwarmHistoryConsole` page module demonstrates the approval history UI pattern.
+
+Software architecture draft prepared for human review and approval.

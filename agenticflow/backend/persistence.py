@@ -22,6 +22,8 @@ SCHEMA_TABLES = [
     "audit_events",
     "model_role_audit_events",
     "exports",
+    "gsrp_runs",
+    "gsrp_approval_decisions",
 ]
 
 REQUIRED_ROLES = [
@@ -230,6 +232,37 @@ class GovernancePersistenceStore:
                 filename TEXT NOT NULL,
                 content TEXT NOT NULL,
                 created_at TEXT NOT NULL
+            );
+
+            CREATE TABLE IF NOT EXISTS gsrp_runs (
+                id TEXT PRIMARY KEY,
+                workspace_id TEXT NOT NULL REFERENCES company_workspaces(workspace_id),
+                created_by_email TEXT NOT NULL REFERENCES users(email),
+                request TEXT NOT NULL,
+                risk_level TEXT NOT NULL,
+                governance_decision TEXT NOT NULL,
+                human_approval_required INTEGER NOT NULL,
+                approval_status TEXT NOT NULL,
+                selected_agents_json TEXT NOT NULL,
+                capability_contracts_json TEXT NOT NULL,
+                selected_plan_json TEXT NOT NULL,
+                candidate_outputs_json TEXT NOT NULL,
+                critiques_json TEXT NOT NULL,
+                verification_json TEXT NOT NULL,
+                audit_events_json TEXT NOT NULL,
+                result_json TEXT NOT NULL,
+                created_at TEXT NOT NULL
+            );
+
+            CREATE TABLE IF NOT EXISTS gsrp_approval_decisions (
+                id TEXT PRIMARY KEY,
+                gsrp_run_id TEXT NOT NULL REFERENCES gsrp_runs(id),
+                decision TEXT NOT NULL,
+                decided_by TEXT NOT NULL,
+                user_email TEXT NOT NULL REFERENCES users(email),
+                user_role TEXT NOT NULL,
+                reason TEXT NOT NULL,
+                decided_at TEXT NOT NULL
             );
             """
         )
@@ -718,6 +751,90 @@ class GovernancePersistenceStore:
         ).fetchall()
         return [_row_to_camel_dict(row) for row in rows]
 
+
+    def persist_gsrp_run(self, payload: dict[str, Any]) -> dict[str, Any]:
+        run = dict(payload["run"])
+        created_by_email = str(payload.get("createdByEmail", "agent@valorstruct.local"))
+        self.get_user(created_by_email)
+        record = {
+            "id": run.get("runId", "gsrp-run-001"),
+            "workspaceId": payload.get("workspaceId", DEMO_WORKSPACE_ID),
+            "createdByEmail": created_by_email,
+            "request": run.get("request", payload.get("request", "Prepare governed swarm package")),
+            "riskLevel": run.get("riskLevel", "medium"),
+            "governanceDecision": run.get("governanceDecision", "requires_human_approval"),
+            "humanApprovalRequired": 1 if run.get("humanApprovalRequired", True) else 0,
+            "approvalStatus": payload.get("approvalStatus", "pending-human-approval" if run.get("humanApprovalRequired", True) else "draft-approved"),
+            "selectedAgentsJson": json.dumps(run.get("selectedAgents", []), sort_keys=True),
+            "capabilityContractsJson": json.dumps(run.get("capabilityContracts", []), sort_keys=True),
+            "selectedPlanJson": json.dumps(run.get("selectedPlan", []), sort_keys=True),
+            "candidateOutputsJson": json.dumps(run.get("candidateOutputs", []), sort_keys=True),
+            "critiquesJson": json.dumps(run.get("critiques", []), sort_keys=True),
+            "verificationJson": json.dumps(run.get("verification", {}), sort_keys=True),
+            "auditEventsJson": json.dumps(run.get("auditEvents", []), sort_keys=True),
+            "resultJson": json.dumps(run, sort_keys=True),
+            "createdAt": payload.get("createdAt", DEMO_CREATED_AT),
+        }
+        self.connection.execute(
+            """
+            INSERT OR REPLACE INTO gsrp_runs
+            (id, workspace_id, created_by_email, request, risk_level, governance_decision, human_approval_required, approval_status, selected_agents_json, capability_contracts_json, selected_plan_json, candidate_outputs_json, critiques_json, verification_json, audit_events_json, result_json, created_at)
+            VALUES (:id, :workspaceId, :createdByEmail, :request, :riskLevel, :governanceDecision, :humanApprovalRequired, :approvalStatus, :selectedAgentsJson, :capabilityContractsJson, :selectedPlanJson, :candidateOutputsJson, :critiquesJson, :verificationJson, :auditEventsJson, :resultJson, :createdAt)
+            """,
+            record,
+        )
+        self.connection.commit()
+        return self.get_gsrp_run(str(record["id"]))
+
+    def list_gsrp_runs(self) -> list[dict[str, Any]]:
+        rows = self.connection.execute("SELECT * FROM gsrp_runs ORDER BY created_at DESC, id").fetchall()
+        return [_gsrp_run_row_to_dict(row, self.list_gsrp_approval_decisions(str(row["id"]))) for row in rows]
+
+    def get_gsrp_run(self, run_id: str) -> dict[str, Any]:
+        row = self.connection.execute("SELECT * FROM gsrp_runs WHERE id = ?", (run_id,)).fetchone()
+        if row is None:
+            raise ValueError(f"GSRP run {run_id} was not found")
+        return _gsrp_run_row_to_dict(row, self.list_gsrp_approval_decisions(run_id))
+
+    def list_gsrp_approval_decisions(self, run_id: str) -> list[dict[str, Any]]:
+        rows = self.connection.execute(
+            "SELECT * FROM gsrp_approval_decisions WHERE gsrp_run_id = ? ORDER BY decided_at, id",
+            (run_id,),
+        ).fetchall()
+        return [_gsrp_approval_decision_row_to_dict(row) for row in rows]
+
+    def record_gsrp_approval_decision(self, run_id: str, decision: dict[str, Any]) -> dict[str, Any]:
+        run = self.get_gsrp_run(run_id)
+        user_email = str(decision.get("userEmail", DEFAULT_APPROVER_EMAIL))
+        user = self.get_user(user_email)
+        if user["role"] not in {"Owner", "Admin", "Senior Structural Engineer", "Reviewer"}:
+            raise PermissionError(f"{user['role']} cannot approve GSRP runs.")
+        normalized_decision = str(decision["decision"]).lower()
+        if normalized_decision not in {"approved", "rejected", "needs_revision"}:
+            raise ValueError("GSRP decision must be approved, rejected, or needs_revision")
+        record = {
+            "id": decision.get("id", f"gsrp-decision-{run_id}-{len(run['approvalDecisions']) + 1}"),
+            "gsrpRunId": run_id,
+            "decision": normalized_decision,
+            "decidedBy": decision.get("decidedBy", user["displayName"]),
+            "userEmail": user_email,
+            "userRole": user["role"],
+            "reason": decision.get("reason", "GSRP approval decision recorded."),
+            "decidedAt": decision.get("decidedAt", DEMO_CREATED_AT),
+        }
+        self.connection.execute(
+            """
+            INSERT OR REPLACE INTO gsrp_approval_decisions
+            (id, gsrp_run_id, decision, decided_by, user_email, user_role, reason, decided_at)
+            VALUES (:id, :gsrpRunId, :decision, :decidedBy, :userEmail, :userRole, :reason, :decidedAt)
+            """,
+            record,
+        )
+        approval_status = "approved" if normalized_decision == "approved" else "rejected" if normalized_decision == "rejected" else "needs-revision"
+        self.connection.execute("UPDATE gsrp_runs SET approval_status = ? WHERE id = ?", (approval_status, run_id))
+        self.connection.commit()
+        return self.get_gsrp_run(run_id)
+
     def _package_risk_level(self, package_run_id: str) -> int:
         row = self.connection.execute(
             "SELECT level FROM risk_classifications WHERE package_run_id = ?",
@@ -932,3 +1049,39 @@ def _normalize_value(key: str, value: Any) -> Any:
     if key in {"required", "blocked", "active"}:
         return bool(value)
     return value
+
+
+def _gsrp_run_row_to_dict(row: sqlite3.Row, approval_decisions: list[dict[str, Any]]) -> dict[str, Any]:
+    return {
+        "id": row["id"],
+        "workspaceId": row["workspace_id"],
+        "createdByEmail": row["created_by_email"],
+        "request": row["request"],
+        "riskLevel": row["risk_level"],
+        "governanceDecision": row["governance_decision"],
+        "humanApprovalRequired": bool(row["human_approval_required"]),
+        "approvalStatus": row["approval_status"],
+        "selectedAgents": json.loads(row["selected_agents_json"]),
+        "capabilityContracts": json.loads(row["capability_contracts_json"]),
+        "selectedPlan": json.loads(row["selected_plan_json"]),
+        "candidateOutputs": json.loads(row["candidate_outputs_json"]),
+        "critiques": json.loads(row["critiques_json"]),
+        "verification": json.loads(row["verification_json"]),
+        "auditEvents": json.loads(row["audit_events_json"]),
+        "result": json.loads(row["result_json"]),
+        "approvalDecisions": approval_decisions,
+        "createdAt": row["created_at"],
+    }
+
+
+def _gsrp_approval_decision_row_to_dict(row: sqlite3.Row) -> dict[str, Any]:
+    return {
+        "id": row["id"],
+        "gsrpRunId": row["gsrp_run_id"],
+        "decision": row["decision"],
+        "decidedBy": row["decided_by"],
+        "userEmail": row["user_email"],
+        "userRole": row["user_role"],
+        "reason": row["reason"],
+        "decidedAt": row["decided_at"],
+    }
